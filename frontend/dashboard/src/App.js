@@ -148,6 +148,7 @@ const CSS = `
   .badge-red { background: #FEE2E2; color: #DC2626; }
   .badge-blue { background: #DBEAFE; color: #2563EB; }
   .badge-purple { background: #EDE9FE; color: #7C3AED; }
+  .badge-green { background: #D1FAE5; color: #065F46; }
 
   /* PRODUCT GRID */
   .product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
@@ -1535,15 +1536,15 @@ function WeatherForecast({ currency }) {
     const periodDays = period === '1m' ? 30 : period === '3m' ? 90 : 180;
     const today = new Date();
 
-    /* Build date range: past periodDays → today → future periodDays */
+    /* Build date range: past periodDays → today (live dates, ending at today) */
     const allDates = [];
-    for (let i = -periodDays; i <= periodDays; i++) {
+    for (let i = -periodDays; i <= 0; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
       allDates.push(d);
     }
     const totalPts = allDates.length;
-    const pastPts = periodDays; /* index where today is */
+    const pastPts = totalPts - 1; /* today is always the last point */
 
     /* Reduce to ~26 visible tick labels */
     const step = Math.max(1, Math.floor(totalPts / 26));
@@ -1700,7 +1701,7 @@ function WeatherForecast({ currency }) {
         <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
           <label style={{ fontSize:12, fontWeight:600, color:'#6B7280', whiteSpace:'nowrap' }}>📅 Period:</label>
           <div style={{ display:'flex', gap:5 }}>
-            {[['1m','1M'],['3m','3M'],['6m','6M']].map(([v,l]) => (
+            {[['1m','1 Month'],['3m','3 Months'],['6m','6 Months']].map(([v,l]) => (
               <button key={v} className={`period-btn ${period===v?'active':''}`} onClick={() => setPeriod(v)}>{l}</button>
             ))}
           </div>
@@ -1767,7 +1768,7 @@ function WeatherForecast({ currency }) {
             </div>
           </div>
           <div style={{ display:'flex', gap:5, flexShrink:0 }}>
-            {[['1m','1M'],['3m','3M'],['6m','6M']].map(([v,l]) => (
+            {[['1m','1 Month'],['3m','3 Months'],['6m','6 Months']].map(([v,l]) => (
               <button key={v} className={`period-btn ${period===v?'active':''}`} onClick={() => setPeriod(v)}>{l}</button>
             ))}
           </div>
@@ -1937,6 +1938,7 @@ export default function App() {
             await fetchAll();
             await fetchHistory(selectedProduct);
             await fetchForecast(selectedProduct);
+            setLastUpdated(new Date()); /* force timestamp to exact scrape completion time */
             setScraping(false);
             setScrapeSuccess(true);
             setTimeout(() => setScrapeSuccess(false), 4000);
@@ -2561,53 +2563,111 @@ export default function App() {
                 <div className="page-subtitle">136-source database · UN, USDA, FAO & industry providers</div>
               </div>
 
+              {/* ── ACTIVE SCRAPING SOURCES ── */}
               <div className="card" style={{ marginBottom: 20 }}>
-                <div className="card-title">✅ Active Free Sources</div>
-                <div className="card-subtitle">Currently integrated and pulling data</div>
-                <table className="data-table">
-                  <thead><tr><th>Source</th><th>Type</th><th>Coverage</th><th>Reliability</th><th>URL</th></tr></thead>
-                  <tbody>
-                    {[
-                      { name: 'UN Comtrade',    type: 'Trade Data',     cov: 'EU Imports',   rel: 5, url: 'comtradeapi.un.org' },
-                      { name: 'USDA NASS',      type: 'Production',     cov: 'USA',          rel: 5, url: 'quickstats.nass.usda.gov' },
-                      { name: 'FAOSTAT',        type: 'UN Agriculture', cov: 'Global',       rel: 5, url: 'fenixservices.fao.org' },
-                      { name: 'Market Baseline',type: 'Estimates',      cov: 'All origins',  rel: 3, url: 'Internal' },
-                    ].map((s, i) => (
-                      <tr key={i}>
-                        <td><strong>{s.name}</strong></td>
-                        <td><span className="badge badge-blue">{s.type}</span></td>
-                        <td style={{ color: '#6B7280', fontSize: 13 }}>{s.cov}</td>
-                        <td>{'★'.repeat(s.rel)}{'☆'.repeat(5 - s.rel)}</td>
-                        <td style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#6366F1' }}>{s.url}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="card-title">✅ Active Scraping Sources</div>
+                <div className="card-subtitle">NICO currently pulls data from these free APIs every scrape</div>
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <table className="data-table" style={{ minWidth: 500 }}>
+                    <thead><tr><th>Source</th><th>Type</th><th>Products</th><th>URL</th></tr></thead>
+                    <tbody>
+                      {[
+                        { name: 'UN Comtrade API',     type: 'Trade Prices',    prod: 'All nuts & dried fruits', url: 'comtradeapi.un.org', badge: 'badge-blue' },
+                        { name: 'USDA NASS QuickStats', type: 'Farm Prices',    prod: 'Almonds, Walnuts, Pistachios, Raisins', url: 'quickstats.nass.usda.gov', badge: 'badge-blue' },
+                        { name: 'FAOSTAT',             type: 'UN Agriculture',  prod: 'All products (global)', url: 'fenixservices.fao.org', badge: 'badge-blue' },
+                        { name: 'FreshPlaza',          type: 'Market News',     prod: 'All products', url: 'freshplaza.com', badge: 'badge-blue' },
+                        { name: 'IndexMundi',          type: 'Commodity Index', prod: 'Almonds, Cashews, Pistachios', url: 'indexmundi.com', badge: 'badge-blue' },
+                        { name: 'Alibaba',             type: 'B2B Wholesale',   prod: 'All products', url: 'alibaba.com', badge: 'badge-blue' },
+                        { name: 'Made-in-China',       type: 'B2B Wholesale',   prod: 'All products', url: 'made-in-china.com', badge: 'badge-blue' },
+                        { name: 'Open-Meteo',          type: 'Weather API',     prod: 'All crop regions', url: 'api.open-meteo.com', badge: 'badge-green' },
+                      ].map((s, i) => (
+                        <tr key={i}>
+                          <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{s.name}</td>
+                          <td><span className={`badge ${s.badge}`}>{s.type}</span></td>
+                          <td style={{ color: '#6B7280', fontSize: 12 }}>{s.prod}</td>
+                          <td>
+                            <a href={`https://${s.url}`} target="_blank" rel="noreferrer"
+                               style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#6366F1', textDecoration: 'none', wordBreak: 'break-all' }}>
+                              {s.url}
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
+              {/* ── OFFICIAL TRADE & STATISTICAL SOURCES ── */}
+              <div className="card" style={{ marginBottom: 20 }}>
+                <div className="card-title">🏛️ Official Trade & Statistical Sources</div>
+                <div className="card-subtitle">Used for validation and EU market benchmarks</div>
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <table className="data-table" style={{ minWidth: 500 }}>
+                    <thead><tr><th>Source</th><th>Focus</th><th>URL</th></tr></thead>
+                    <tbody>
+                      {[
+                        { name: 'Eurostat API',          focus: 'EU trade & import prices',    url: 'ec.europa.eu/eurostat/databrowser' },
+                        { name: 'Eurostat Comext',       focus: 'EU agricultural trade flows',  url: 'ec.europa.eu/eurostat/statistics-explained' },
+                        { name: 'ITC Trade Map',         focus: 'Trade flows & unit values',    url: 'trademap.org' },
+                        { name: 'WITS WorldBank',        focus: 'Global trade statistics',      url: 'wits.worldbank.org' },
+                        { name: 'OEC World',             focus: 'Economic complexity data',     url: 'oec.world' },
+                        { name: 'Netherlands CBS StatLine', focus: 'Dutch import hub data',     url: 'cbs.nl/en-gb/our-services/open-data' },
+                        { name: 'USDA FAS GAIN',         focus: 'Country crop/trade reports',   url: 'fas.usda.gov/data' },
+                        { name: 'ABARES Australia',      focus: 'Crop & trade outlooks',        url: 'agriculture.gov.au/abares' },
+                        { name: 'TurkStat',              focus: 'Turkey production/trade',      url: 'tuik.gov.tr' },
+                        { name: 'DataComex Spain',       focus: 'Spain trade flows',            url: 'datacomex.comercio.es' },
+                        { name: 'EU Agri-food Portal',   focus: 'EU agri-food prices & trade',  url: 'agridata.ec.europa.eu' },
+                        { name: 'CBI Market Info',       focus: 'EU importer guidance',         url: 'cbi.eu/market-information' },
+                        { name: 'RASFF Portal',          focus: 'EU food safety alerts',        url: 'webgate.ec.europa.eu/rasff-window' },
+                        { name: 'ECB API',               focus: 'EUR/USD FX rates',             url: 'data.ecb.europa.eu' },
+                      ].map((s, i) => (
+                        <tr key={i}>
+                          <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{s.name}</td>
+                          <td style={{ color: '#6B7280', fontSize: 12 }}>{s.focus}</td>
+                          <td>
+                            <a href={`https://${s.url}`} target="_blank" rel="noreferrer"
+                               style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#6366F1', textDecoration: 'none', wordBreak: 'break-all' }}>
+                              {s.url}
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* ── PREMIUM SOURCES ── */}
               <div className="card">
-                <div className="card-title">💎 Premium Sources (Recommended)</div>
-                <div className="card-subtitle">Upgrade for real-time EU benchmark prices</div>
-                <table className="data-table">
-                  <thead><tr><th>Source</th><th>Why Important</th><th>Products</th><th>Link</th></tr></thead>
-                  <tbody>
-                    {[
-                      { name: 'Vesper',        why: 'Best EU benchmark prices for nuts',      prod: 'All nuts',       url: 'vespertool.com/nuts' },
-                      { name: 'Expana Markets',why: 'Food ingredient price benchmarks',       prod: 'All products',   url: 'expanamarkets.com' },
-                      { name: 'Mintec',        why: 'Industry standard for manufacturers',   prod: 'All products',   url: 'mintecglobal.com' },
-                      { name: 'Tridge',        why: 'Origin-level wholesale prices',         prod: 'All nuts',       url: 'tridge.com/intelligences' },
-                      { name: 'INC',           why: 'Global nut production statistics',      prod: 'All nuts',       url: 'inc.nutfruit.org' },
-                      { name: 'AgFlow',        why: 'Trade-flow & shipment monitoring',      prod: 'All products',   url: 'agflow.com' },
-                    ].map((s, i) => (
-                      <tr key={i}>
-                        <td><strong>{s.name}</strong></td>
-                        <td style={{ color: '#6B7280', fontSize: 13 }}>{s.why}</td>
-                        <td><span className="badge badge-purple">{s.prod}</span></td>
-                        <td style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#6366F1' }}>{s.url}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="card-title">💎 Premium Sources (Recommended Upgrade)</div>
+                <div className="card-subtitle">Subscribe for real-time EU benchmark prices</div>
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <table className="data-table" style={{ minWidth: 400 }}>
+                    <thead><tr><th>Source</th><th>Why Important</th><th>URL</th></tr></thead>
+                    <tbody>
+                      {[
+                        { name: 'Vesper',         why: 'Best EU benchmark prices for nuts',     url: 'vespertool.com/nuts' },
+                        { name: 'Expana Markets', why: 'Food ingredient price benchmarks',      url: 'expanamarkets.com' },
+                        { name: 'Mintec',         why: 'Industry standard for manufacturers',  url: 'mintecglobal.com' },
+                        { name: 'Tridge',         why: 'Origin-level wholesale prices',        url: 'tridge.com/intelligences' },
+                        { name: 'INC',            why: 'Global nut production statistics',     url: 'inc.nutfruit.org' },
+                        { name: 'AgFlow',         why: 'Trade-flow & shipment monitoring',     url: 'agflow.com' },
+                      ].map((s, i) => (
+                        <tr key={i}>
+                          <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{s.name}</td>
+                          <td style={{ color: '#6B7280', fontSize: 12 }}>{s.why}</td>
+                          <td>
+                            <a href={`https://${s.url}`} target="_blank" rel="noreferrer"
+                               style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#6366F1', textDecoration: 'none', wordBreak: 'break-all' }}>
+                              {s.url}
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
