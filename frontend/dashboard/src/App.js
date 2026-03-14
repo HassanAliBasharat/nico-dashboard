@@ -417,7 +417,7 @@ const EU_MARKET_BENCHMARKS = {
 };
 
 /* ── TOP 5 NICO product list (Walnuts → Dried Papaya) from docx, with CALCONUT & EU market data ── */
-const TOP5_NICO_DATA = [
+const TOP5_NICO_DATA = [ // eslint-disable-line no-unused-vars
   { rank:1,  product:'Walnuts',           origin:'USA · Chile · China',      calconutPrice:4.54,  nicoRangeLow:4.50, nicoRangeHigh:6.50, marketAvg:5.10, trend:'↗', note:'Core product, 60-70% of turnover' },
   { rank:2,  product:'Almonds',           origin:'USA · Spain · Australia',  calconutPrice:6.29,  nicoRangeLow:6.10, nicoRangeHigh:7.20, marketAvg:6.50, trend:'→', note:'Highest EU import volume' },
   { rank:3,  product:'Cashews',           origin:'Vietnam · India',          calconutPrice:6.18,  nicoRangeLow:5.20, nicoRangeHigh:7.50, marketAvg:6.20, trend:'↗', note:'WW240–WW450 grade spread' },
