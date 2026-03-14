@@ -8,7 +8,7 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
 
-const API = 'https://web-production-c20a2.up.railway.app';
+const API = 'http://localhost:8000';
 
 const ALL_PRODUCTS = ['almond','cashew','pistachio','walnut','raisin','date','dried_fig','dried_apricot'];
 
@@ -1615,7 +1615,6 @@ function WeatherForecast({ currency }) {
     /* Temperature: real API data or seasonal fallback */
     let tempValues = [];
     if (wd && wd.dates && wd.temps) {
-      const todayStr = today.toISOString().slice(0, 10);
       allDates.filter((_, i) => i % step === 0).forEach(d => {
         const dateStr = d.toISOString().slice(0, 10);
         const idx = wd.dates.indexOf(dateStr);
@@ -1730,7 +1729,7 @@ function WeatherForecast({ currency }) {
         },
       },
     });
-  }, [weatherData, selectedCountry, period, currency]);
+  }, [weatherData, selectedCountry, period, currency, country.lat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const wd = weatherData[selectedCountry];
   const pd = COUNTRY_PRICE_DATA[selectedCountry];
@@ -1837,7 +1836,7 @@ function WeatherForecast({ currency }) {
         {/* Legend */}
         <div className="weather-legend">
           <div className="legend-item"><div className="legend-dot" style={{ background:'#10B981' }}/><span>🟢 Historic price (solid)</span></div>
-          <div className="legend-item"><div className="legend-dot" style={{ background:'#10B981', border:'2px dashed #10B981', background:'transparent' }}/><span style={{ color:'#6B7280' }}>🟢 - - Price forecast (dashed)</span></div>
+          <div className="legend-item"><div className="legend-dot" style={{ background:'transparent', border:'2px dashed #10B981' }}/><span style={{ color:'#6B7280' }}>🟢 - - Price forecast (dashed)</span></div>
           <div className="legend-item"><div className="legend-dot" style={{ background:'#F97316' }}/><span>🟠 Temperature °C</span></div>
           <div style={{ marginLeft:'auto', fontSize:11, color:'#9CA3AF' }}>💡 Hover for exact values</div>
         </div>
