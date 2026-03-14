@@ -8,7 +8,7 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
 
-const API = 'https://web-production-c20a2.up.railway.app';
+const API = 'http://localhost:8000';
 
 const ALL_PRODUCTS = ['almond','cashew','pistachio','walnut','raisin','date','dried_fig','dried_apricot'];
 
@@ -222,6 +222,15 @@ const CSS = `
   @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
   .fade-up { animation: fadeUp 0.35s ease forwards; }
 
+  /* SCRAPE PROGRESS BAR */
+  .scrape-progress-wrap { width:100%; margin-top:6px; }
+  .scrape-progress-bar { height:5px; border-radius:3px; background:#E5E7EB; overflow:hidden; }
+  .scrape-progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#6366F1,#8B5CF6); transition:width 0.4s ease; }
+  .scrape-progress-label { font-size:10px; color:#9CA3AF; margin-top:3px; font-family:'JetBrains Mono',monospace; text-align:right; }
+
+  /* SCRAPE SUCCESS POPUP */
+  .scrape-success-popup { position:fixed; bottom:24px; right:24px; background:#10B981; color:#fff; padding:12px 20px; border-radius:12px; font-size:13px; font-weight:600; box-shadow:0 4px 20px rgba(16,185,129,0.4); z-index:9999; display:flex; align-items:center; gap:8px; animation:fadeUp 0.3s ease forwards; }
+
   /* ── WEATHER TAB ── */
   .weather-map-container { width:100%; height:480px; border-radius:14px; overflow:hidden; border:1px solid #EAECF5; background:#1a3a5c; position:relative; }
   .weather-map-container iframe { width:100%; height:100%; border:none; }
@@ -387,7 +396,6 @@ function AlertItem({ alert, onRemove }) {
 ───────────────────────────────────────────── */
 
 const CATALOG_TABS = [
-  'TOP 5',
   'Almonds','Pistachios','Cashews','Walnuts','Raisins',
   'Hazelnuts','Pecans','Brazil Nuts','Macadamia','Pine Nuts',
   'Dates','Dried Figs','Dried Apricots','Dried Fruits','Seeds & Other'
@@ -660,7 +668,7 @@ const NETHERLANDS_SUPPLY_DATA = [
    SUPPLIER CATALOG COMPONENT — fully responsive
 ───────────────────────────────────────────── */
 function SupplierCatalog({ fmt, currency }) {
-  const [activeTab, setActiveTab] = useState('TOP 5');
+  const [activeTab, setActiveTab] = useState('Almonds');
   const [search, setSearch] = useState('');
   const [showCharts, setShowCharts] = useState(false);
   const tabsRef = React.useRef(null);
@@ -729,7 +737,7 @@ function SupplierCatalog({ fmt, currency }) {
     },
   };
 
-  const isTop5 = activeTab === 'TOP 5';
+
 
   return (
     <div className="page fade-up">
@@ -803,73 +811,7 @@ function SupplierCatalog({ fmt, currency }) {
 
       <div className="card" style={{ borderTopLeftRadius:0, borderTopRightRadius:0, borderTop:'none' }}>
 
-        {/* ── TOP 5 special table view (Walnuts → Dried Papaya) ── */}
-        {isTop5 ? (
-          <>
-            <div style={{ marginBottom:14, padding:'10px 14px', background:'#F0F2F8', borderRadius:10, fontSize:12, color:'#6B7280' }}>
-              <strong>NICO Product List</strong> — Walnuts to Dried Papaya · CALCONUT 09/03/2026 prices vs EU market averages (Eurostat · WITS · ITC TradeMap · OEC)
-            </div>
-            <div className="table-scroll-wrap">
-              <table className="data-table" style={{ minWidth:820 }}>
-                <thead>
-                  <tr>
-                    <th style={{ minWidth:40 }}>#</th>
-                    <th style={{ minWidth:160 }}>Product</th>
-                    <th style={{ minWidth:160 }}>Origin</th>
-                    <th style={{ minWidth:110 }}>CALCONUT Price</th>
-                    <th style={{ minWidth:140 }}>EU Market Range (30d)</th>
-                    <th style={{ minWidth:110 }}>EU Avg (30d)</th>
-                    <th style={{ minWidth:60 }}>Trend</th>
-                    <th style={{ minWidth:180 }}>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {TOP5_NICO_DATA.map(r => {
-                    const rankStyle = r.rank === 1
-                      ? { background:'linear-gradient(135deg,#F59E0B,#EF4444)', color:'#fff' }
-                      : r.rank === 2
-                      ? { background:'linear-gradient(135deg,#6B7280,#9CA3AF)', color:'#fff' }
-                      : r.rank === 3
-                      ? { background:'linear-gradient(135deg,#92400E,#B45309)', color:'#fff' }
-                      : { background:'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff' };
-                    const lo = currency==='EUR' ? r.nicoRangeLow : r.nicoRangeLow/0.92;
-                    const hi = currency==='EUR' ? r.nicoRangeHigh : r.nicoRangeHigh/0.92;
-                    const avg = currency==='EUR' ? r.marketAvg : r.marketAvg/0.92;
-                    const cp = r.calconutPrice ? (currency==='EUR' ? r.calconutPrice : r.calconutPrice/0.92) : null;
-                    const sym = currency==='EUR' ? '€' : '$';
-                    return (
-                      <tr key={r.rank}>
-                        <td>
-                          <div style={{ width:28, height:28, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:12, flexShrink:0, ...rankStyle }}>
-                            {r.rank}
-                          </div>
-                        </td>
-                        <td><strong style={{ fontSize:13 }}>{r.product}</strong></td>
-                        <td style={{ fontSize:12, color:'#6B7280' }}>{r.origin}</td>
-                        <td style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:700, color:'#6366F1' }}>
-                          {cp ? `${sym}${cp.toFixed(2)}` : <span style={{ color:'#D1D5DB' }}>—</span>}
-                        </td>
-                        <td style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:12 }}>
-                          {sym}{lo.toFixed(2)} – {sym}{hi.toFixed(2)}
-                        </td>
-                        <td style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:13, fontWeight:700, color:'#10B981' }}>
-                          {sym}{avg.toFixed(2)}
-                        </td>
-                        <td style={{ fontSize:18, textAlign:'center' }}>{r.trend}</td>
-                        <td style={{ fontSize:11, color:'#9CA3AF' }}>{r.note}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ marginTop:14, paddingTop:12, borderTop:'1px solid #F3F4F6', display:'flex', gap:12, flexWrap:'wrap' }}>
-              <span style={{ fontSize:11, color:'#9CA3AF' }}>📊 EU market ranges sourced from: Eurostat COMEXT · WITS WorldBank · ITC TradeMap · OEC</span>
-              <span style={{ fontSize:11, color:'#9CA3AF' }}>💱 Rate: 1 EUR = {(1/0.92).toFixed(4)} USD</span>
-            </div>
-          </>
-        ) : (
-          <>
+
             {/* Search + legend row */}
             <div style={{ marginBottom:16, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
               <input
@@ -954,8 +896,6 @@ function SupplierCatalog({ fmt, currency }) {
               <span style={{ fontSize:11, color:'#9CA3AF' }}>⏰ <strong>CALCONUT prices valid 24h</strong> from 09/03/2026</span>
               <span style={{ fontSize:11, color:'#9CA3AF' }}>💱 <strong>Rate:</strong> 1 EUR = {(1/0.92).toFixed(4)} USD</span>
             </div>
-          </>
-        )}
       </div>
     </div>
   );
@@ -1911,6 +1851,8 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState('almond');
   const [tableFilter, setTableFilter] = useState('all');
   const [scraping, setScraping] = useState(false);
+  const [scrapeProgress, setScrapeProgress] = useState(0);
+  const [scrapeSuccess, setScrapeSuccess] = useState(false);
   const [currency, setCurrency] = useState('USD'); // USD or EUR
   const EUR_RATE = 0.92; // 1 USD = 0.92 EUR (update periodically)
   const fmt = (usdVal) => {
@@ -1978,31 +1920,40 @@ export default function App() {
 
   const handleScrape = async () => {
     setScraping(true);
+    setScrapeProgress(0);
+    setScrapeSuccess(false);
     try {
-      // Fire the scrape — backend starts it in a background thread immediately
       await axios.post(`${API}/scrape`, {}, { headers: authH(), timeout: 10000 });
-
-      // Poll /scrape/status every 4 seconds until scraper finishes
+      let elapsed = 0;
+      const estimatedMs = 30000; // ~30s estimated scrape time
       const poll = setInterval(async () => {
         try {
+          elapsed += 4000;
+          /* Animate progress: 0→90% while running, 100% on done */
           const s = await axios.get(`${API}/scrape/status`, { headers: authH() });
           if (!s.data.running) {
             clearInterval(poll);
-            // Refresh dashboard with fresh data
+            setScrapeProgress(100);
             await fetchAll();
             await fetchHistory(selectedProduct);
             await fetchForecast(selectedProduct);
             setScraping(false);
+            setScrapeSuccess(true);
+            setTimeout(() => setScrapeSuccess(false), 4000);
+          } else {
+            const pct = Math.min(90, Math.round((elapsed / estimatedMs) * 90));
+            setScrapeProgress(pct);
           }
         } catch {
           clearInterval(poll);
           setScraping(false);
+          setScrapeProgress(0);
         }
       }, 4000);
-
     } catch (err) {
       alert('Could not start scraper — make sure backend is running');
       setScraping(false);
+      setScrapeProgress(0);
     }
   };
 
@@ -2024,8 +1975,11 @@ export default function App() {
   const barData = {
     labels: ALL_PRODUCTS.map(p => PRODUCT_META[p].label),
     datasets: [{
-      label: 'USD/kg',
-      data: ALL_PRODUCTS.map(p => summary[p]?.latest || 0),
+      label: currency === 'EUR' ? 'EUR/kg' : 'USD/kg',
+      data: ALL_PRODUCTS.map(p => {
+        const v = summary[p]?.latest || 0;
+        return parseFloat((currency === 'EUR' ? v * 0.92 : v).toFixed(3));
+      }),
       backgroundColor: barColors,
       borderColor: barBorders,
       borderWidth: 1.5,
@@ -2034,11 +1988,18 @@ export default function App() {
     }]
   };
 
-  const histData = history[selectedProduct]?.length > 0 ? {
-    labels: history[selectedProduct].slice(-20).map(h => h.date.slice(5, 10)),
+  /* Last 30 days from today */
+  const last30History = (() => {
+    if (!history[selectedProduct]?.length) return [];
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    return history[selectedProduct].filter(h => new Date(h.date) >= cutoff);
+  })();
+  const histData = last30History.length > 0 ? {
+    labels: last30History.map(h => new Date(h.date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' })),
     datasets: [{
-      label: 'USD/kg',
-      data: history[selectedProduct].slice(-20).map(h => h.price),
+      label: currency === 'EUR' ? 'EUR/kg' : 'USD/kg',
+      data: last30History.map(h => currency === 'EUR' ? parseFloat((h.price * 0.92).toFixed(3)) : parseFloat(parseFloat(h.price).toFixed(3))),
       borderColor: PRODUCT_META[selectedProduct].color,
       backgroundColor: PRODUCT_META[selectedProduct].color + '18',
       fill: true, tension: 0.45, pointRadius: 3,
@@ -2067,12 +2028,12 @@ export default function App() {
         backgroundColor: '#1A1D2E', cornerRadius: 10,
         titleFont: { family: "'Plus Jakarta Sans',sans-serif", size: 12 },
         bodyFont: { family: "'JetBrains Mono',monospace", size: 12 },
-        callbacks: { label: ctx => ` ${currency === 'EUR' ? '€' : '$'}${ctx.parsed.y?.toFixed(2)}/kg` }
+        callbacks: { label: ctx => ` ${currency === 'EUR' ? '€' : '$'}${ctx.parsed.y?.toFixed(3)}/kg` }
       }
     },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { size: 11, family: "'Plus Jakarta Sans',sans-serif" }, maxRotation: 35 }, border: { display: false } },
-      y: { grid: { color: '#F3F4F6' }, ticks: { color: '#9CA3AF', font: { size: 11, family: "'JetBrains Mono',monospace" }, callback: v => `${currency === 'EUR' ? '€' : '$'}${v}` }, border: { display: false } }
+      y: { grid: { color: '#F3F4F6' }, ticks: { color: '#9CA3AF', font: { size: 11, family: "'JetBrains Mono',monospace" }, callback: v => `${currency === 'EUR' ? '€' : '$'}${parseFloat(v).toFixed(3)}` }, border: { display: false } }
     }
   });
 
@@ -2137,9 +2098,17 @@ export default function App() {
               <button onClick={() => setCurrency('EUR')} style={{ flex:1, padding:'7px 0', borderRadius:6, border:'none', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:700, background: currency==='EUR' ? '#fff' : 'transparent', color: currency==='EUR' ? '#6366F1' : '#9CA3AF', boxShadow: currency==='EUR' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition:'all 0.18s' }}>€ EUR</button>
             </div>
             <button className="topbar-btn" style={{ width:'100%', justifyContent:'center' }} onClick={() => { fetchAll(); setSidebarOpen(false); }}>↻ Refresh Data</button>
-            <button className="refresh-btn" style={{ width:'100%', justifyContent:'center' }} onClick={() => { handleScrape(); setSidebarOpen(false); }} disabled={scraping}>
-              {scraping ? '⏳ Scraping...' : '⬇ Scrape Data'}
-            </button>
+            <div style={{ width:'100%' }}>
+              <button className="refresh-btn" style={{ width:'100%', justifyContent:'center' }} onClick={() => { handleScrape(); setSidebarOpen(false); }} disabled={scraping}>
+                {scraping ? `⏳ ${scrapeProgress}%` : '⬇ Scrape Data'}
+              </button>
+              {scraping && (
+                <div className="scrape-progress-wrap">
+                  <div className="scrape-progress-bar"><div className="scrape-progress-fill" style={{ width:`${scrapeProgress}%` }}/></div>
+                  <div className="scrape-progress-label">{scrapeProgress}% complete</div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="sidebar-bottom">
@@ -2178,9 +2147,19 @@ export default function App() {
                   <button onClick={() => setCurrency('EUR')} style={{ padding:'5px 12px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:700, background: currency==='EUR' ? '#fff' : 'transparent', color: currency==='EUR' ? '#6366F1' : '#9CA3AF', boxShadow: currency==='EUR' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition:'all 0.18s' }}>€ EUR</button>
                 </div>
                 <button className="topbar-btn" onClick={fetchAll}>↻ Refresh</button>
-                <button className="refresh-btn" onClick={handleScrape} disabled={scraping}>
-                  {scraping ? '⏳ Scraping...' : '⬇ Scrape Data'}
-                </button>
+                <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+                  <button className="refresh-btn" onClick={handleScrape} disabled={scraping}>
+                    {scraping ? `⏳ ${scrapeProgress}%` : '⬇ Scrape Data'}
+                  </button>
+                  {scraping && (
+                    <div className="scrape-progress-wrap">
+                      <div className="scrape-progress-bar">
+                        <div className="scrape-progress-fill" style={{ width:`${scrapeProgress}%` }}/>
+                      </div>
+                      <div className="scrape-progress-label">{scrapeProgress}% complete</div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </header>
@@ -2635,6 +2614,13 @@ export default function App() {
 
         </div>
       </div>
+
+      {/* ── Scrape success popup ── */}
+      {scrapeSuccess && (
+        <div className="scrape-success-popup">
+          ✅ Data scraped successfully!
+        </div>
+      )}
     </>
   );
-} 
+}
