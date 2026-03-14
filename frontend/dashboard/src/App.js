@@ -8,7 +8,7 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
 
-const API = 'http://localhost:8000';
+const API = 'https://web-production-c20a2.up.railway.app';
 
 const ALL_PRODUCTS = ['almond','cashew','pistachio','walnut','raisin','date','dried_fig','dried_apricot'];
 
