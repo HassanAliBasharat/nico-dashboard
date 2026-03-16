@@ -1478,7 +1478,7 @@ function tempColor(c) {
   if (c >= -5) return '#3B82F6';
   return '#8B5CF6';
 }
-function tempClass(c) {
+function tempClass(c) { // eslint-disable-line no-unused-vars
   if (c >= 30) return 'temp-hot';
   if (c >= 18) return 'temp-warm';
   if (c >= 5)  return 'temp-cool';
