@@ -31,29 +31,41 @@ ALGORITHM  = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# ─── CORS — allowed origins ─────────────────────────────────────────────────────
-#
-#   LOCAL  → allows localhost:3000 (your React dev server)
-#   RAILWAY → add your Vercel URL as ALLOWED_ORIGIN environment variable
-#             e.g.  ALLOWED_ORIGIN=https://nico-dashboard.vercel.app
-#
-ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "http://localhost:3000")
+# ─── CORS — allow all Vercel preview URLs + localhost automatically ──────────────
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
 
 ALL_PRODUCTS = ["almond", "cashew", "pistachio", "walnut", "raisin", "date", "dried_fig", "dried_apricot"]
 
 app = FastAPI(title="NICO Price Intelligence", version="4.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        ALLOWED_ORIGIN,          # your Vercel URL (set via Railway env variable)
-        "http://localhost:3000",  # always allow local dev regardless
-        "http://localhost:3001",  # React sometimes uses 3001 if 3000 is busy
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Accept any *.vercel.app origin + localhost — no env variable needed
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        origin = request.headers.get("origin", "")
+        allowed = (
+            origin.endswith(".vercel.app") or
+            origin.startswith("http://localhost") or
+            origin.startswith("https://localhost")
+        )
+        if request.method == "OPTIONS":
+            from starlette.responses import Response as SR
+            r = SR()
+            if allowed:
+                r.headers["Access-Control-Allow-Origin"] = origin
+            r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            r.headers["Access-Control-Allow-Headers"] = "*"
+            r.headers["Access-Control-Allow-Credentials"] = "true"
+            return r
+        response = await call_next(request)
+        if allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+app.add_middleware(DynamicCORSMiddleware)
 
 # ─── Auth helpers ────────────────────────────────────────────────────────────────
 
@@ -79,6 +91,24 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 @app.get("/")
 def root():
     return {"status": "NICO API v4 running", "products": ALL_PRODUCTS}
+
+@app.get("/ping")
+def ping():
+    return {"status": "ok"}
+
+# ─── Keep-alive: self-ping every 10 min to prevent Railway from sleeping ─────
+def _keep_alive():
+    import time, httpx
+    port = int(os.environ.get("PORT", 8000))
+    url = f"http://localhost:{port}/ping"
+    while True:
+        time.sleep(600)
+        try:
+            httpx.get(url, timeout=5)
+        except Exception:
+            pass
+
+threading.Thread(target=_keep_alive, daemon=True).start()
 
 @app.post("/login")
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
