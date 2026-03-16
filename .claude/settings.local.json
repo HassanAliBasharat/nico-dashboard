@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"tab === ''weather''\" /c/Users/Hp/dryfruit-dashboard/frontend/dashboard/src/App.js)"
+    ]
+  }
+}
