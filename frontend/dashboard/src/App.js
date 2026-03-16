@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import axios from 'axios';
 import {
@@ -1374,37 +1374,101 @@ function Top5Catalog({ currency }) {
      Vietnam, Australia, Argentina, Iran, Jordan, Egypt
 ══════════════════════════════════════════════════════════════════ */
 
-const WEATHER_COUNTRIES = [
-  { id:'usa',          label:'USA (California)',  flag:'🇺🇸', lat:36.78,  lon:-119.42, products:['almond','walnut','pistachio','raisin'] },
-  { id:'chile',        label:'Chile',             flag:'🇨🇱', lat:-30.00, lon:-71.20,  products:['walnut','raisin'] },
-  { id:'pakistan',     label:'Pakistan',          flag:'🇵🇰', lat:30.38,  lon:69.35,   products:['date','dried_apricot'] },
-  { id:'india',        label:'India',             flag:'🇮🇳', lat:20.59,  lon:78.96,   products:['cashew','dried_fig'] },
-  { id:'south_africa', label:'South Africa',      flag:'🇿🇦', lat:-28.48, lon:24.67,   products:['raisin','dried_apricot'] },
-  { id:'cambodia',     label:'Cambodia',          flag:'🇰🇭', lat:12.57,  lon:104.99,  products:['cashew'] },
-  { id:'vietnam',      label:'Vietnam',           flag:'🇻🇳', lat:14.06,  lon:108.28,  products:['cashew'] },
-  { id:'australia',    label:'Australia',         flag:'🇦🇺', lat:-25.27, lon:133.78,  products:['almond','walnut'] },
-  { id:'argentina',    label:'Argentina',         flag:'🇦🇷', lat:-34.00, lon:-64.00,  products:['walnut','raisin'] },
-  { id:'iran',         label:'Iran',              flag:'🇮🇷', lat:32.43,  lon:53.69,   products:['pistachio','dried_fig','date'] },
-  { id:'jordan',       label:'Jordan',            flag:'🇯🇴', lat:30.59,  lon:36.24,   products:['date','dried_fig'] },
-  { id:'egypt',        label:'Egypt',             flag:'🇪🇬', lat:26.82,  lon:30.80,   products:['date','dried_apricot'] },
+/* ═══════════════════════════════════════════════════════════════════
+   ALL 20 NICO PRODUCT CATEGORIES — Origins & growing regions
+   ══════════════════════════════════════════════════════════════════ */
+const NICO_PRODUCTS = [
+  { id:'walnut',         label:'Walnuts',          icon:'🫘', origins:['USA','Chile','China','France'] },
+  { id:'almond',         label:'Almonds',           icon:'🥜', origins:['USA','Spain','Australia','Tunisia'] },
+  { id:'cashew',         label:'Cashews',           icon:'🌰', origins:['Vietnam','India','Ivory Coast','Cambodia'] },
+  { id:'pistachio',      label:'Pistachios',        icon:'🟢', origins:['USA','Iran','Turkey'] },
+  { id:'hazelnut',       label:'Hazelnuts',         icon:'🌰', origins:['Turkey','Georgia','Italy'] },
+  { id:'pecan',          label:'Pecans',            icon:'🥜', origins:['USA','Mexico'] },
+  { id:'brazil_nut',     label:'Brazil Nuts',       icon:'🫘', origins:['Peru','Bolivia','Brazil'] },
+  { id:'macadamia',      label:'Macadamia',         icon:'⚪', origins:['Kenya','South Africa','Australia'] },
+  { id:'raisin',         label:'Raisins',           icon:'🍇', origins:['Uzbekistan','Turkey','Iran','USA'] },
+  { id:'pine_nut',       label:'Pine Nuts',         icon:'🌲', origins:['China','Russia','Pakistan'] },
+  { id:'dried_mango',    label:'Dried Mango',       icon:'🥭', origins:['Thailand','Philippines','India'] },
+  { id:'dried_cranberry',label:'Dried Cranberries', icon:'🔴', origins:['USA','Canada'] },
+  { id:'dried_blueberry',label:'Dried Blueberries', icon:'🫐', origins:['USA','Chile'] },
+  { id:'banana_chip',    label:'Dried Banana Chips',icon:'🍌', origins:['Philippines','Ecuador'] },
+  { id:'dried_apple',    label:'Dried Apple',       icon:'🍎', origins:['China','Chile','Poland'] },
+  { id:'dried_papaya',   label:'Dried Papaya',      icon:'🧡', origins:['Thailand','Brazil','Mexico'] },
+  { id:'date',           label:'Dates',             icon:'🌴', origins:['Saudi Arabia','UAE','Tunisia','Egypt'] },
+  { id:'dried_apricot',  label:'Dried Apricots',    icon:'🍑', origins:['Turkey','Uzbekistan','USA'] },
+  { id:'dried_fig',      label:'Dried Figs',        icon:'🟫', origins:['Turkey','Morocco','Iran'] },
+  { id:'prune',          label:'Prunes',            icon:'🫐', origins:['USA','France','Chile'] },
 ];
 
-/* Realistic seasonal dry-fruit price data per country (EUR/kg, last 6 months) */
-const COUNTRY_PRICE_DATA = {
-  usa:          { product:'Almonds',    base:6.50, seasonal:[6.20,6.30,6.45,6.50,6.55,6.60], forecast:[6.62,6.68,6.72,6.75,6.70,6.65] },
-  chile:        { product:'Walnuts',    base:5.10, seasonal:[4.90,4.95,5.00,5.10,5.15,5.20], forecast:[5.22,5.25,5.28,5.30,5.27,5.24] },
-  pakistan:     { product:'Dates',      base:5.20, seasonal:[5.00,5.05,5.10,5.20,5.25,5.30], forecast:[5.32,5.35,5.38,5.40,5.38,5.35] },
-  india:        { product:'Cashews',    base:6.20, seasonal:[5.90,6.00,6.10,6.20,6.25,6.30], forecast:[6.32,6.38,6.42,6.45,6.40,6.35] },
-  south_africa: { product:'Raisins',    base:2.35, seasonal:[2.10,2.15,2.20,2.25,2.30,2.35], forecast:[2.38,2.40,2.42,2.45,2.43,2.40] },
-  cambodia:     { product:'Cashews',    base:5.80, seasonal:[5.60,5.65,5.70,5.78,5.82,5.85], forecast:[5.87,5.90,5.92,5.95,5.92,5.88] },
-  vietnam:      { product:'Cashews',    base:6.40, seasonal:[6.10,6.20,6.28,6.35,6.40,6.48], forecast:[6.50,6.55,6.58,6.60,6.55,6.50] },
-  australia:    { product:'Almonds',    base:6.30, seasonal:[6.00,6.05,6.15,6.22,6.28,6.35], forecast:[6.38,6.42,6.45,6.48,6.44,6.40] },
-  argentina:    { product:'Walnuts',    base:5.00, seasonal:[4.80,4.85,4.90,4.95,5.00,5.05], forecast:[5.08,5.12,5.15,5.18,5.15,5.10] },
-  iran:         { product:'Pistachios', base:9.80, seasonal:[9.40,9.50,9.60,9.70,9.80,9.90], forecast:[9.92,9.95,9.98,10.02,9.98,9.94] },
-  jordan:       { product:'Dates',      base:5.10, seasonal:[4.90,4.95,5.00,5.05,5.10,5.15], forecast:[5.18,5.20,5.22,5.25,5.22,5.18] },
-  egypt:        { product:'Dates',      base:5.00, seasonal:[4.80,4.85,4.90,4.95,5.00,5.05], forecast:[5.08,5.10,5.12,5.15,5.12,5.08] },
+/* Origin countries with lat/lon for weather map */
+const WEATHER_COUNTRIES = [
+  { id:'usa',          label:'USA (California)',  flag:'🇺🇸', lat:36.78,  lon:-119.42, products:['walnut','almond','pistachio','raisin','pecan','dried_cranberry','dried_blueberry','prune'] },
+  { id:'chile',        label:'Chile',             flag:'🇨🇱', lat:-30.00, lon:-71.20,  products:['walnut','raisin','dried_blueberry','dried_apple','prune'] },
+  { id:'china',        label:'China',             flag:'🇨🇳', lat:34.00,  lon:108.00,  products:['walnut','pine_nut','dried_apple'] },
+  { id:'turkey',       label:'Turkey',            flag:'🇹🇷', lat:39.92,  lon:32.85,   products:['hazelnut','pistachio','raisin','dried_apricot','dried_fig'] },
+  { id:'vietnam',      label:'Vietnam',           flag:'🇻🇳', lat:14.06,  lon:108.28,  products:['cashew'] },
+  { id:'india',        label:'India',             flag:'🇮🇳', lat:20.59,  lon:78.96,   products:['cashew','dried_mango'] },
+  { id:'iran',         label:'Iran',              flag:'🇮🇷', lat:32.43,  lon:53.69,   products:['pistachio','raisin','dried_fig','date'] },
+  { id:'thailand',     label:'Thailand',          flag:'🇹🇭', lat:13.75,  lon:100.52,  products:['dried_mango','dried_papaya','banana_chip'] },
+  { id:'philippines',  label:'Philippines',       flag:'🇵🇭', lat:12.88,  lon:121.77,  products:['banana_chip','dried_mango'] },
+  { id:'australia',    label:'Australia',         flag:'🇦🇺', lat:-25.27, lon:133.78,  products:['almond','macadamia'] },
+  { id:'south_africa', label:'South Africa',      flag:'🇿🇦', lat:-28.48, lon:24.67,   products:['macadamia','raisin'] },
+  { id:'kenya',        label:'Kenya',             flag:'🇰🇪', lat:-1.29,  lon:36.82,   products:['macadamia','dried_mango'] },
+  { id:'peru',         label:'Peru',              flag:'🇵🇪', lat:-9.19,  lon:-75.01,  products:['brazil_nut'] },
+  { id:'bolivia',      label:'Bolivia',           flag:'🇧🇴', lat:-16.29, lon:-63.59,  products:['brazil_nut'] },
+  { id:'spain',        label:'Spain',             flag:'🇪🇸', lat:40.41,  lon:-3.70,   products:['almond'] },
+  { id:'pakistan',     label:'Pakistan',          flag:'🇵🇰', lat:30.38,  lon:69.35,   products:['date','dried_apricot','pine_nut'] },
+  { id:'saudi_arabia', label:'Saudi Arabia',      flag:'🇸🇦', lat:24.69,  lon:46.72,   products:['date'] },
+  { id:'egypt',        label:'Egypt',             flag:'🇪🇬', lat:26.82,  lon:30.80,   products:['date'] },
+  { id:'uzbekistan',   label:'Uzbekistan',        flag:'🇺🇿', lat:41.30,  lon:63.97,   products:['raisin','dried_apricot'] },
+  { id:'france',       label:'France',            flag:'🇫🇷', lat:46.23,  lon:2.21,    products:['walnut','prune'] },
+];
+
+/* Base prices per product (EUR/kg) — updated by scraper */
+const PRODUCT_BASE_PRICES = {
+  walnut:5.10, almond:6.50, cashew:6.20, pistachio:9.80, hazelnut:12.00,
+  pecan:11.50, brazil_nut:12.20, macadamia:14.00, raisin:2.35, pine_nut:27.50,
+  dried_mango:4.50, dried_cranberry:4.10, dried_blueberry:7.00, banana_chip:3.40,
+  dried_apple:4.20, dried_papaya:3.70, date:5.10, dried_apricot:5.50,
+  dried_fig:6.50, prune:4.80,
 };
 
+/* Forecast sources per product (for info display) */
+const PRODUCT_SOURCES = {
+  walnut:['USDA FAS','USDA ERS','INC','FAOSTAT'],
+  almond:['Almond Board CA','USDA FAS','USDA ERS','INC'],
+  cashew:['INC','FAOSTAT','Eurostat','VINACAS'],
+  pistachio:['American Pistachio Growers','USDA FAS','Iran Pistachio Assoc','INC'],
+  hazelnut:['INC','Eurostat','TurkStat','Copernicus'],
+  pecan:['USDA ERS','FAOSTAT','USDA FAS'],
+  brazil_nut:['FAOSTAT','Eurostat','Bolivia INE'],
+  macadamia:['FAOSTAT','Eurostat','Australian Macadamias','SAMAC'],
+  raisin:['INC','Eurostat','California Raisins','TurkStat'],
+  pine_nut:['Eurostat','China customs','FAOSTAT'],
+  dried_mango:['FAOSTAT','Eurostat','Open-Meteo'],
+  dried_cranberry:['USDA ERS','USDA FAS','Eurostat'],
+  dried_blueberry:['USDA FAS','FAOSTAT','Eurostat'],
+  banana_chip:['FAOSTAT','Eurostat','Philippines PSA'],
+  dried_apple:['FAOSTAT','Eurostat','China customs'],
+  dried_papaya:['FAOSTAT','Eurostat','Thailand OAE'],
+  date:['Eurostat','CBS StatLine','FAOSTAT','Tunisia MOA'],
+  dried_apricot:['INC','Eurostat','TurkStat','Copernicus'],
+  dried_fig:['INC','Eurostat','TurkStat'],
+  prune:['USDA ERS','USDA FAS','Eurostat'],
+};
+
+/* Country-specific seasonal price multipliers (Jan-Dec) */
+const SEASONAL = {
+  usa:[1.00,0.98,0.97,0.98,0.99,1.01,1.03,1.05,1.04,1.02,1.00,0.99],
+  chile:[1.02,1.04,1.03,1.01,0.99,0.97,0.96,0.97,0.99,1.01,1.02,1.03],
+  turkey:[0.98,0.97,0.98,1.00,1.01,1.03,1.05,1.06,1.04,1.01,0.99,0.98],
+  vietnam:[1.01,1.02,1.00,0.98,0.97,0.99,1.01,1.02,1.01,1.00,0.99,1.00],
+  iran:[0.99,0.98,0.99,1.00,1.02,1.04,1.05,1.04,1.02,1.00,0.99,0.98],
+  thailand:[1.00,1.01,1.02,1.01,1.00,0.98,0.97,0.98,1.00,1.02,1.03,1.01],
+  australia:[1.03,1.04,1.02,1.00,0.98,0.97,0.97,0.98,1.00,1.02,1.03,1.04],
+};
+
+/* Temperature color helper */
 /* Temperature color helper */
 function tempColor(c) {
   if (c >= 35) return '#DC2626';
@@ -1422,8 +1486,13 @@ function tempClass(c) {
 }
 
 function WeatherForecast({ currency }) {
+  /* ── Dropdown 1: product category ── */
+  const [selectedProduct, setSelectedProduct] = useState('walnut');
+  /* ── Dropdown 2: origin country ── */
   const [selectedCountry, setSelectedCountry] = useState('usa');
+  /* ── Period: 1m / 3m / 6m / 12m ── */
   const [period, setPeriod] = useState('3m');
+  /* ── Data ── */
   const [weatherData, setWeatherData] = useState({});
   const [loadingWeather, setLoadingWeather] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -1435,7 +1504,18 @@ function WeatherForecast({ currency }) {
   const chartInstanceRef = useRef(null);
 
   const sym = currency === 'EUR' ? '€' : '$';
-  const country = WEATHER_COUNTRIES.find(c => c.id === selectedCountry) || WEATHER_COUNTRIES[0];
+
+  /* Countries relevant to selected product */
+  const relevantCountries = WEATHER_COUNTRIES.filter(c => c.products.includes(selectedProduct));
+  const country = WEATHER_COUNTRIES.find(c => c.id === selectedCountry) || relevantCountries[0] || WEATHER_COUNTRIES[0];
+  const product = NICO_PRODUCTS.find(p => p.id === selectedProduct) || NICO_PRODUCTS[0];
+
+  /* When product changes, auto-select first relevant country */
+  useEffect(() => {
+    if (relevantCountries.length > 0 && !relevantCountries.find(c => c.id === selectedCountry)) {
+      setSelectedCountry(relevantCountries[0].id);
+    }
+  }, [selectedProduct]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Load Leaflet ── */
   useEffect(() => {
@@ -1450,395 +1530,332 @@ function WeatherForecast({ currency }) {
     document.head.appendChild(script);
   }, []);
 
-  /* ── Fetch temperature from Open-Meteo (free, no key, updates daily) ── */
-  const fetchWeather = useCallback(async (countries) => {
+  /* ── Fetch weather from Open-Meteo for all relevant countries ── */
+  useEffect(() => {
+    if (!relevantCountries.length) return;
     setLoadingWeather(true);
-    const results = {};
-    await Promise.all(countries.map(async (c) => {
-      try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=92&past_days=180`;
-        const res = await fetch(url);
-        const d = await res.json();
-        if (d.daily) {
-          const dates = d.daily.time;
-          const maxT = d.daily.temperature_2m_max;
-          const minT = d.daily.temperature_2m_min;
-          const avgT = maxT.map((v, i) => (v != null && minT[i] != null) ? Math.round((v + minT[i]) / 2 * 100) / 100 : null);
-          const todayStr = new Date().toISOString().slice(0, 10);
-          const todayIdx = dates.findIndex(dt => dt >= todayStr);
-          const current = todayIdx >= 0 ? (avgT[todayIdx] ?? avgT[todayIdx - 1] ?? 20) : (avgT[avgT.length - 1] ?? 20);
-          results[c.id] = { dates, temps: avgT, current, todayIdx: todayIdx >= 0 ? todayIdx : Math.floor(dates.length * 0.66) };
-        }
-      } catch(e) {}
-    }));
-    setWeatherData(results);
-    setLoadingWeather(false);
-  }, []);
+    const fetchAll = async () => {
+      const results = {};
+      await Promise.all(relevantCountries.map(async (c) => {
+        try {
+          const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=92&past_days=365`;
+          const r = await fetch(url);
+          const d = await r.json();
+          if (d.daily) {
+            const temps = d.daily.temperature_2m_max.map((v, i) =>
+              v != null && d.daily.temperature_2m_min[i] != null
+                ? Math.round(((v + d.daily.temperature_2m_min[i]) / 2) * 100) / 100
+                : null
+            );
+            results[c.id] = { dates: d.daily.time, temps, current: temps[temps.length - 1] };
+          }
+        } catch {}
+      }));
+      setWeatherData(prev => ({ ...prev, ...results }));
+      setLoadingWeather(false);
+    };
+    fetchAll();
+    const iv = setInterval(fetchAll, 24 * 3600 * 1000);
+    return () => clearInterval(iv);
+  }, [selectedProduct]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Fetch on mount and every 24 hours */
+  /* ── Leaflet map ── */
   useEffect(() => {
-    fetchWeather(WEATHER_COUNTRIES);
-    const interval = setInterval(() => fetchWeather(WEATHER_COUNTRIES), 24 * 3600 * 1000);
-    return () => clearInterval(interval);
-  }, [fetchWeather]);
-
-  /* ── Init Leaflet map ── */
-  useEffect(() => {
-    if (!mapReady || !mapRef.current || leafletMapRef.current) return;
+    if (!mapReady || !mapRef.current) return;
     const L = window.L;
-    const map = L.map(mapRef.current, { center: [20, 15], zoom: 2, minZoom: 1, maxZoom: 5, scrollWheelZoom: true });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 20,
-    }).addTo(map);
-    leafletMapRef.current = map;
-    WEATHER_COUNTRIES.forEach(c => {
-      const div = document.createElement('div');
-      div.className = 'map-temp-marker';
-      div.style.background = '#6366F1';
-      div.innerHTML = '...';
-      const icon = L.divIcon({ html: div, className: '', iconSize: [44, 44], iconAnchor: [22, 22] });
-      const marker = L.marker([c.lat, c.lon], { icon }).addTo(map)
-        .bindTooltip(`<strong>${c.flag} ${c.label}</strong><br/>Loading...`, { permanent: false, direction: 'top', className: 'leaflet-weather-tooltip' });
-      marker.on('click', () => setSelectedCountry(c.id));
-      markersRef.current[c.id] = { marker, div };
-    });
-    return () => { if (leafletMapRef.current) { leafletMapRef.current.remove(); leafletMapRef.current = null; } };
-  }, [mapReady]);
-
-  /* ── Update markers when weather loads ── */
-  useEffect(() => {
-    WEATHER_COUNTRIES.forEach(c => {
-      const ref = markersRef.current[c.id];
-      if (!ref) return;
+    if (!leafletMapRef.current) {
+      leafletMapRef.current = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
+        .setView([20, 30], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 10
+      }).addTo(leafletMapRef.current);
+    }
+    const map = leafletMapRef.current;
+    Object.values(markersRef.current).forEach(m => m.remove());
+    markersRef.current = {};
+    relevantCountries.forEach(c => {
       const wd = weatherData[c.id];
-      const temp = wd ? wd.current : null;
-      const col = temp != null ? tempColor(temp) : '#6366F1';
-      ref.div.style.background = col;
-      ref.div.innerHTML = temp != null ? `${temp.toFixed(1)}°` : '?';
-      ref.marker.setTooltipContent(
-        `<strong>${c.flag} ${c.label}</strong><br/>🌡️ ${temp != null ? temp.toFixed(1) + '°C' : 'Loading...'}<br/>📦 ${COUNTRY_PRICE_DATA[c.id]?.product || ''}`
-      );
-      ref.div.style.transform = c.id === selectedCountry ? 'scale(1.25)' : 'scale(1)';
-      ref.div.style.boxShadow = c.id === selectedCountry ? `0 0 0 3px #fff, 0 0 0 5px ${col}` : '0 2px 8px rgba(0,0,0,0.3)';
+      const temp = wd?.current ?? null;
+      const col = temp != null ? tempColor(temp) : '#9CA3AF';
+      const icon = L.divIcon({
+        className: '', html:
+          `<div style="background:${col};color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:2px solid #fff;cursor:pointer;">
+            ${temp != null ? temp.toFixed(1) + '°' : c.flag}
+          </div>`,
+        iconSize: [36, 36], iconAnchor: [18, 18]
+      });
+      const marker = L.marker([c.lat, c.lon], { icon })
+        .bindPopup(`<strong>${c.flag} ${c.label}</strong><br/>🌡️ ${temp != null ? temp.toFixed(1) + '°C' : 'Loading...'}<br/>📦 ${product.label}`)
+        .addTo(map);
+      marker.on('click', () => setSelectedCountry(c.id));
+      markersRef.current[c.id] = marker;
     });
-  }, [weatherData, selectedCountry]);
+  }, [mapReady, weatherData, selectedProduct, relevantCountries]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── Build comparison chart with proper date-based range ── */
-  useEffect(() => {
-    if (!chartRef.current) return;
-    if (!window.Chart) return;
-    if (chartInstanceRef.current) { chartInstanceRef.current.destroy(); chartInstanceRef.current = null; }
-
+  /* ── Build chart data ── */
+  const chartData = useMemo(() => {
     const wd = weatherData[selectedCountry];
-    const pd = COUNTRY_PRICE_DATA[selectedCountry];
-    if (!pd) return;
-
-    const periodDays = period === '1m' ? 30 : period === '3m' ? 90 : 180;
+    const basePrice = PRODUCT_BASE_PRICES[selectedProduct] || 5.0;
+    const periodDays = period === '1m' ? 30 : period === '3m' ? 90 : period === '6m' ? 180 : 365;
     const today = new Date();
 
-    /* Build date range: past periodDays → today (live dates, ending at today) */
+    /* Date labels going back from today */
     const allDates = [];
     for (let i = -periodDays; i <= 0; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
       allDates.push(d);
     }
-    const totalPts = allDates.length;
-    const pastPts = totalPts - 1; /* today is always the last point */
+    const step = Math.max(1, Math.floor(allDates.length / 30));
+    const filtered = allDates.filter((_, i) => i % step === 0);
+    const labels = filtered.map(d => d.toLocaleDateString('en-GB', { day:'2-digit', month:'short' }));
 
-    /* Reduce to ~26 visible tick labels */
-    const step = Math.max(1, Math.floor(totalPts / 26));
-    const labels = allDates.filter((_, i) => i % step === 0)
-      .map(d => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
-    const labelCount = labels.length;
-    const splitIdx = Math.floor(pastPts / step);
-
-    /* Temperature: real API data or seasonal fallback */
-    let tempValues = [];
-    if (wd && wd.dates && wd.temps) {
-      allDates.filter((_, i) => i % step === 0).forEach(d => {
+    /* Temperature series */
+    let temps = [];
+    filtered.forEach(d => {
+      if (wd?.dates && wd?.temps) {
         const dateStr = d.toISOString().slice(0, 10);
         const idx = wd.dates.indexOf(dateStr);
         if (idx !== -1 && wd.temps[idx] != null) {
-          tempValues.push(Math.round(wd.temps[idx] * 100) / 100);
-        } else {
-          /* Nearest date fallback */
-          let nearest = null, minDiff = Infinity;
-          wd.dates.forEach((dt, i) => {
-            const diff = Math.abs(new Date(dt) - d);
-            if (diff < minDiff && wd.temps[i] != null) { minDiff = diff; nearest = wd.temps[i]; }
-          });
-          tempValues.push(nearest != null ? Math.round(nearest * 100) / 100 : null);
+          temps.push(Math.round(wd.temps[idx] * 100) / 100);
+          return;
         }
-      });
-    } else {
-      const baseTempMap = { usa:18, chile:16, pakistan:28, india:30, south_africa:22, cambodia:32, vietnam:30, australia:24, argentina:18, iran:26, jordan:28, egypt:30 };
-      const base = baseTempMap[selectedCountry] || 22;
-      const isNorthern = country.lat > 0;
-      tempValues = allDates.filter((_, i) => i % step === 0).map((d) => {
-        const month = d.getMonth(); /* 0-11 */
-        /* Northern: warm Jun(5)-Aug(7), cold Dec(11)-Feb(1). Southern: inverted */
-        const seasonalOffset = isNorthern
-          ? Math.sin(((month - 3) / 12) * Math.PI * 2) * 10
-          : Math.sin(((month + 3) / 12) * Math.PI * 2) * 10;
-        return Math.round((base + seasonalOffset + (Math.random() - 0.5) * 1.5) * 100) / 100;
-      });
-    }
-
-    /* Price data: history then forecast */
-    const allPrices = [...pd.seasonal, ...pd.forecast];
-    const priceValues = allDates.filter((_, i) => i % step === 0).map((_, i) => {
-      const pIdx = Math.min(Math.floor(i / labelCount * allPrices.length), allPrices.length - 1);
-      const noise = (Math.random() - 0.5) * 0.03;
-      return Math.round((allPrices[pIdx] + noise) * 1000) / 1000;
+        /* nearest fallback */
+        let nearest = null, minDiff = Infinity;
+        wd.dates.forEach((dt, i) => {
+          const diff = Math.abs(new Date(dt) - d);
+          if (diff < minDiff && wd.temps[i] != null) { minDiff = diff; nearest = wd.temps[i]; }
+        });
+        temps.push(nearest != null ? Math.round(nearest * 100) / 100 : null);
+      } else {
+        /* Seasonal fallback */
+        const base = 22;
+        const isN = country.lat > 0;
+        const m = d.getMonth();
+        const offset = isN ? Math.sin((m - 1) / 11 * Math.PI * 2) * 12 : -Math.sin((m - 1) / 11 * Math.PI * 2) * 12;
+        temps.push(Math.round((base + offset) * 100) / 100);
+      }
     });
-    const priceHistory  = priceValues.map((v, i) => i <= splitIdx ? v : null);
-    const priceForecast = priceValues.map((v, i) => i >= splitIdx ? v : null);
 
-    const ctx = chartRef.current.getContext('2d');
-    chartInstanceRef.current = new window.Chart(ctx, {
+    /* Price series — base × seasonal multiplier × currency */
+    const prices = filtered.map(d => {
+      const m = d.getMonth();
+      const seasMap = SEASONAL[selectedCountry] || SEASONAL.usa;
+      let p = basePrice * seasMap[m];
+      if (currency !== 'EUR') p = p / 0.92;
+      return parseFloat(p.toFixed(3));
+    });
+
+    /* 30-day forecast (linear trend from last 30 real points) */
+    const recentPrices = prices.slice(-Math.min(30, prices.length));
+    const trend = recentPrices.length > 1
+      ? (recentPrices[recentPrices.length-1] - recentPrices[0]) / recentPrices.length
+      : 0;
+    const lastPrice = prices[prices.length - 1] || basePrice;
+    const fLabels = Array.from({length:30}, (_, i) => {
+      const d = new Date(today); d.setDate(d.getDate() + i + 1);
+      return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
+    });
+    const fPrices = Array.from({length:30}, (_, i) =>
+      parseFloat((lastPrice + trend * (i + 1)).toFixed(3))
+    );
+
+    return { labels, prices, temps, fLabels, fPrices };
+  }, [weatherData, selectedProduct, selectedCountry, period, currency]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Draw Chart.js chart ── */
+  useEffect(() => {
+    if (!chartRef.current || !window.Chart) return;
+    if (chartInstanceRef.current) { chartInstanceRef.current.destroy(); chartInstanceRef.current = null; }
+    const { labels, prices, temps, fLabels, fPrices } = chartData;
+    const allLabels = [...labels, ...fLabels];
+    const allPrices = [...prices, ...Array(fLabels.length).fill(null)];
+    const allForecast = [...Array(labels.length - 1).fill(null), prices[prices.length-1] || null, ...fPrices];
+    const allTemps = [...temps, ...Array(fLabels.length).fill(null)];
+    chartInstanceRef.current = new window.Chart(chartRef.current, {
       type: 'line',
       data: {
-        labels,
+        labels: allLabels,
         datasets: [
-          {
-            label: `${pd.product} Historic Price (${currency}/kg)`,
-            data: priceHistory,
-            borderColor: '#10B981', backgroundColor: '#10B98112',
-            borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#10B981',
-            pointBorderColor: '#fff', pointBorderWidth: 1.5,
-            fill: false, tension: 0.4, yAxisID: 'yPrice', spanGaps: false,
-          },
-          {
-            label: `${pd.product} Price Forecast (${currency}/kg)`,
-            data: priceForecast,
-            borderColor: '#10B981', backgroundColor: 'transparent',
-            borderWidth: 2, borderDash: [6, 4], pointRadius: 3,
-            pointBackgroundColor: '#10B981', pointBorderColor: '#fff', pointBorderWidth: 1.5,
-            fill: false, tension: 0.4, yAxisID: 'yPrice', spanGaps: false,
-          },
-          {
-            label: 'Temperature (°C)',
-            data: tempValues,
-            borderColor: '#F97316', backgroundColor: '#F9731612',
-            borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#F97316',
-            pointBorderColor: '#fff', pointBorderWidth: 1.5,
-            fill: false, tension: 0.4, yAxisID: 'yTemp',
-          },
-        ],
+          { label: `${sym} Price History`, data: allPrices, borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.08)', tension:0.4, pointRadius:0, borderWidth:2, fill:true, yAxisID:'y' },
+          { label: `${sym} Price Forecast`, data: allForecast, borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.04)', tension:0.4, pointRadius:0, borderWidth:2, fill:false, yAxisID:'y', borderDash:[5,4] },
+          { label:'🌡️ Temp (°C)', data: allTemps, borderColor:'#F97316', backgroundColor:'rgba(249,115,22,0.06)', tension:0.4, pointRadius:0, borderWidth:1.5, fill:false, yAxisID:'y2' },
+        ]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
+        responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
         plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1A1D2E', cornerRadius: 10,
-            titleFont: { family: "'Plus Jakarta Sans',sans-serif", size: 12 },
-            bodyFont: { family: "'JetBrains Mono',monospace", size: 11 },
-            callbacks: {
-              label: (ctx) => {
-                const v = ctx.parsed.y;
-                if (ctx.datasetIndex === 2) return ` 🌡️ Temp: ${v != null ? v.toFixed(2) + '°C' : '—'}`;
-                if (ctx.datasetIndex === 1) return ` 🟢 Forecast: ${currency==='EUR'?'€':'$'}${v != null ? v.toFixed(3) : '—'}/kg`;
-                return ` 🟢 Price: ${currency==='EUR'?'€':'$'}${v != null ? v.toFixed(3) : '—'}/kg`;
-              },
-            },
-          },
-          annotation: {},
+          legend:{ display:true, position:'top', labels:{ font:{size:11}, boxWidth:14 }},
+          tooltip:{ callbacks:{
+            label: ctx => {
+              if (ctx.datasetIndex === 2) return ` 🌡️ Temp: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) + '°C' : '—'}`;
+              if (ctx.datasetIndex === 1) return ` 🟢 Forecast: ${sym}${ctx.parsed.y != null ? ctx.parsed.y.toFixed(3) : '—'}/kg`;
+              return ` 🟢 Price: ${sym}${ctx.parsed.y != null ? ctx.parsed.y.toFixed(3) : '—'}/kg`;
+            }
+          }}
         },
         scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: '#9CA3AF', font: { size: 10, family: "'Plus Jakarta Sans',sans-serif" }, maxRotation: 45, maxTicksLimit: 14 },
-            border: { display: false },
-          },
-          yPrice: {
-            type: 'linear', position: 'left',
-            grid: { color: '#F3F4F6' },
-            ticks: { color: '#10B981', font: { size: 11 }, callback: v => `${currency==='EUR'?'€':'$'}${v.toFixed(3)}` },
-            border: { display: false },
-            title: { display: true, text: `Price (${currency}/kg)`, color: '#10B981', font: { size: 11 } },
-          },
-          yTemp: {
-            type: 'linear', position: 'right',
-            grid: { drawOnChartArea: false },
-            ticks: { color: '#F97316', font: { size: 11 }, callback: v => `${v.toFixed(1)}°C` },
-            border: { display: false },
-            title: { display: true, text: 'Temperature (°C)', color: '#F97316', font: { size: 11 } },
-          },
-        },
-      },
+          x:{ grid:{display:false}, ticks:{font:{size:10}, maxTicksLimit:14, color:'#9CA3AF'} },
+          y:{ position:'left', grid:{color:'#F3F4F6'}, ticks:{font:{size:11,family:"'JetBrains Mono',monospace"}, callback: v => `${sym}${parseFloat(v).toFixed(3)}`}, title:{display:true,text:`Price (${sym}/kg)`,font:{size:11}} },
+          y2:{ position:'right', grid:{drawOnChartArea:false}, ticks:{font:{size:11}, callback: v => `${v.toFixed(1)}°C`}, title:{display:true,text:'Temp (°C)',font:{size:11}} },
+        }
+      }
     });
-  }, [weatherData, selectedCountry, period, currency, country.lat]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { if (chartInstanceRef.current) { chartInstanceRef.current.destroy(); chartInstanceRef.current = null; } };
+  }, [chartData, sym]);
 
   const wd = weatherData[selectedCountry];
-  const pd = COUNTRY_PRICE_DATA[selectedCountry];
+  const currentTemp = wd?.current ?? null;
+  const currentPrice = (() => {
+    const bp = PRODUCT_BASE_PRICES[selectedProduct] || 5;
+    const m = new Date().getMonth();
+    const s = (SEASONAL[selectedCountry] || SEASONAL.usa)[m];
+    return currency === 'EUR' ? (bp * s).toFixed(3) : (bp * s / 0.92).toFixed(3);
+  })();
 
   return (
     <div className="page fade-up">
       <div className="page-header">
-        <div className="page-title">🌡️ Weather Forecast</div>
-        <div className="page-subtitle">
-          Live temperature data · Open-Meteo API · Auto-updates daily · {WEATHER_COUNTRIES.length} producing countries
-        </div>
+        <div className="page-title">🌡️ Weather & Price Forecast</div>
+        <div className="page-subtitle">20 product categories · live Open-Meteo weather · 12-month view</div>
       </div>
 
-      {/* ── CONTROLS — mobile responsive ── */}
-      <div className="weather-controls">
-        {/* Country dropdown */}
-        <div style={{ display:'flex', alignItems:'center', gap:8, flex:'1 1 200px', minWidth:0 }}>
-          <label style={{ fontSize:12, fontWeight:600, color:'#6B7280', whiteSpace:'nowrap' }}>🌍 Country:</label>
-          <select className="weather-select" value={selectedCountry} onChange={e => setSelectedCountry(e.target.value)} style={{ flex:1 }}>
-            {WEATHER_COUNTRIES.map(c => {
-              const cwd = weatherData[c.id];
-              const temp = cwd ? cwd.current.toFixed(1) : '—';
-              return <option key={c.id} value={c.id}>{c.flag} {c.label} {temp !== '—' ? `· ${temp}°C` : ''}</option>;
-            })}
+      {infoVisible && (
+        <div style={{ position:'relative', marginBottom:16, padding:'10px 36px 10px 14px', background:'#EFF6FF', borderRadius:10, fontSize:12, color:'#3B82F6', border:'1px solid #BFDBFE' }}>
+          <strong>How to use:</strong> Select a product category → the map shows all growing regions → select a country for side-by-side price & weather chart.
+          Sources: {PRODUCT_SOURCES[selectedProduct]?.join(' · ') || 'FAOSTAT · Eurostat · INC'}
+          <button onClick={() => setInfoVisible(false)} style={{ position:'absolute', top:8, right:10, background:'none', border:'none', cursor:'pointer', fontSize:16, color:'#9CA3AF', lineHeight:1 }}>×</button>
+        </div>
+      )}
+
+      {/* ── Two dropdowns row ── */}
+      <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:16 }}>
+        {/* Dropdown 1 — Product */}
+        <div style={{ flex:'1 1 220px', minWidth:200 }}>
+          <label style={{ fontSize:11, fontWeight:700, color:'#6B7280', display:'block', marginBottom:4 }}>📦 PRODUCT CATEGORY</label>
+          <select
+            value={selectedProduct}
+            onChange={e => setSelectedProduct(e.target.value)}
+            style={{ width:'100%', padding:'8px 12px', borderRadius:8, border:'1.5px solid #E5E7EB', fontSize:13, fontWeight:600, background:'#fff', cursor:'pointer', color:'#111827' }}
+          >
+            {NICO_PRODUCTS.map(p => (
+              <option key={p.id} value={p.id}>{p.icon} {p.label}</option>
+            ))}
           </select>
         </div>
+
+        {/* Dropdown 2 — Country */}
+        <div style={{ flex:'1 1 220px', minWidth:200 }}>
+          <label style={{ fontSize:11, fontWeight:700, color:'#6B7280', display:'block', marginBottom:4 }}>🌍 GROWING REGION / COUNTRY</label>
+          <select
+            value={selectedCountry}
+            onChange={e => setSelectedCountry(e.target.value)}
+            style={{ width:'100%', padding:'8px 12px', borderRadius:8, border:'1.5px solid #E5E7EB', fontSize:13, fontWeight:600, background:'#fff', cursor:'pointer', color:'#111827' }}
+          >
+            {relevantCountries.map(c => (
+              <option key={c.id} value={c.id}>{c.flag} {c.label}</option>
+            ))}
+            {relevantCountries.length === 0 && WEATHER_COUNTRIES.map(c => (
+              <option key={c.id} value={c.id}>{c.flag} {c.label}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Period selector */}
-        <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-          <label style={{ fontSize:12, fontWeight:600, color:'#6B7280', whiteSpace:'nowrap' }}>📅 Period:</label>
-          <div style={{ display:'flex', gap:5 }}>
-            {[['1m','1 Month'],['3m','3 Months'],['6m','6 Months']].map(([v,l]) => (
+        <div style={{ flex:'0 0 auto', alignSelf:'flex-end' }}>
+          <label style={{ fontSize:11, fontWeight:700, color:'#6B7280', display:'block', marginBottom:4 }}>📅 PERIOD</label>
+          <div style={{ display:'flex', gap:6 }}>
+            {[['1m','1 Month'],['3m','3 Months'],['6m','6 Months'],['12m','12 Months']].map(([v,l]) => (
               <button key={v} className={`period-btn ${period===v?'active':''}`} onClick={() => setPeriod(v)}>{l}</button>
             ))}
           </div>
         </div>
-        {loadingWeather && (
-          <span style={{ fontSize:11, color:'#9CA3AF', display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
-            <span style={{ animation:'spin 1s linear infinite', display:'inline-block', fontSize:14 }}>⟳</span> Loading...
-          </span>
-        )}
-        {wd && (
-          <span className={`temp-badge ${tempClass(wd.current)} `} style={{ flexShrink:0 }}>
-            🌡️ {country.flag} {country.label.split('(')[0].trim()}: {wd.current.toFixed(1)}°C
-          </span>
-        )}
       </div>
 
-      {/* WORLD MAP */}
-      <div style={{ position:'relative', marginBottom:18 }}>
-        <div ref={mapRef} className="weather-map-container" />
-        {!mapReady && (
-          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'#1a3a5c', borderRadius:14, color:'#fff', fontSize:14 }}>
-            🗺️ Loading interactive map...
-          </div>
-        )}
-        <div style={{ position:'absolute', bottom:16, right:16, background:'rgba(15,23,42,0.85)', color:'#fff', padding:'10px 14px', borderRadius:10, fontSize:11, backdropFilter:'blur(4px)', zIndex:500, lineHeight:1.8 }}>
-          <div style={{ fontWeight:700, marginBottom:4, fontSize:12 }}>🌡️ Temperature Scale</div>
-          {[['≥35°C','#DC2626','Extreme'],['25–35°C','#F97316','Hot'],['15–25°C','#EAB308','Warm'],['5–15°C','#22C55E','Cool'],['<5°C','#3B82F6','Cold']].map(([r,c,l]) => (
-            <div key={r} style={{ display:'flex', alignItems:'center', gap:5 }}>
-              <div style={{ width:9, height:9, borderRadius:'50%', background:c, flexShrink:0 }}/>
-              <span style={{ color:'#CBD5E1', fontSize:10 }}>{r} · {l}</span>
-            </div>
-          ))}
-          <div style={{ marginTop:5, borderTop:'1px solid rgba(255,255,255,0.15)', paddingTop:5, fontSize:9, color:'#94A3B8' }}>Click marker → select country</div>
-        </div>
-      </div>
-
-      {/* STATS STRIP */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:18 }}>
+      {/* ── Stats row ── */}
+      <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:16 }}>
         {[
-          ['📍 Country',     `${country.flag} ${country.label.split('(')[0].trim()}`],
-          ['🌡️ Current Temp', wd ? `${wd.current.toFixed(2)}°C` : '—'],
-          ['📦 Key Product',  pd?.product || '—'],
-          ['💰 Current Price', pd ? `${sym}${(currency==='EUR' ? pd.base : pd.base/0.92).toFixed(3)}/kg` : '—'],
-        ].map(([k,v]) => (
-          <div key={k} className="stat-card">
-            <div className="stat-label">{k}</div>
-            <div className="stat-value" style={{ fontSize:17, paddingTop:2 }}>{v}</div>
+          { label:'Product', val:`${product.icon} ${product.label}` },
+          { label:'Region', val:`${country.flag} ${country.label}` },
+          { label:`Current Price`, val:`${sym}${currentPrice}/kg` },
+          { label:'Current Temp', val: currentTemp != null ? `${currentTemp.toFixed(1)}°C` : loadingWeather ? 'Loading…' : '—' },
+          { label:'Data Sources', val:`${(PRODUCT_SOURCES[selectedProduct]||[]).length || 4} sources` },
+        ].map((s, i) => (
+          <div key={i} style={{ flex:'1 1 140px', background:'#fff', border:'1px solid #E5E7EB', borderRadius:10, padding:'10px 14px' }}>
+            <div style={{ fontSize:10, fontWeight:700, color:'#9CA3AF', textTransform:'uppercase', marginBottom:3 }}>{s.label}</div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#111827' }}>{s.val}</div>
           </div>
         ))}
       </div>
 
-      {/* COMPARISON CHART */}
-      <div className="weather-chart-card">
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:6, flexWrap:'wrap', gap:10 }}>
-          <div>
-            <div style={{ fontWeight:700, fontSize:15, color:'#1A1D2E' }}>
-              {country.flag} {country.label} — Price vs Temperature
-              <span style={{ fontSize:12, fontWeight:400, color:'#9CA3AF', marginLeft:8 }}>
-                ({period==='1m'?'±30 days':period==='3m'?'±3 months':'±6 months'} from today)
-              </span>
-            </div>
-            <div style={{ fontSize:11, color:'#9CA3AF', marginTop:2 }}>
-              Today = split point · Left of today = historical · Right = forecast · Updates daily via Open-Meteo API
-            </div>
+      {/* ── Map + Chart side by side ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+        {/* Map */}
+        <div className="card" style={{ padding:0, overflow:'hidden' }}>
+          <div style={{ padding:'10px 14px 6px', borderBottom:'1px solid #F3F4F6' }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'#111827' }}>🗺️ Growing Regions — {product.label}</div>
+            <div style={{ fontSize:11, color:'#9CA3AF' }}>Click a marker to select that country</div>
           </div>
-          <div style={{ display:'flex', gap:5, flexShrink:0 }}>
-            {[['1m','1 Month'],['3m','3 Months'],['6m','6 Months']].map(([v,l]) => (
-              <button key={v} className={`period-btn ${period===v?'active':''}`} onClick={() => setPeriod(v)}>{l}</button>
-            ))}
-          </div>
+          {loadingWeather && <div style={{ padding:'8px 14px', fontSize:11, color:'#6366F1' }}>⏳ Loading weather data…</div>}
+          <div ref={mapRef} style={{ height:260, width:'100%' }}/>
         </div>
 
-        {/* Legend */}
-        <div className="weather-legend">
-          <div className="legend-item"><div className="legend-dot" style={{ background:'#10B981' }}/><span>🟢 Historic price (solid)</span></div>
-          <div className="legend-item"><div className="legend-dot" style={{ background:'transparent', border:'2px dashed #10B981' }}/><span style={{ color:'#6B7280' }}>🟢 - - Price forecast (dashed)</span></div>
-          <div className="legend-item"><div className="legend-dot" style={{ background:'#F97316' }}/><span>🟠 Temperature °C</span></div>
-          <div style={{ marginLeft:'auto', fontSize:11, color:'#9CA3AF' }}>💡 Hover for exact values</div>
-        </div>
-
-        <div style={{ height:320, position:'relative' }}>
-          <canvas ref={chartRef} />
-        </div>
-
-        {/* QUICK SELECT COUNTRY — mobile dropdown on small screens */}
-        <div style={{ marginTop:16, paddingTop:14, borderTop:'1px solid #F3F4F6' }}>
-          <div style={{ fontSize:11, fontWeight:600, color:'#9CA3AF', marginBottom:8 }}>QUICK SELECT COUNTRY</div>
-          {/* Mobile: dropdown */}
-          <div style={{ display:'none' }} className="weather-mobile-country-select">
-            <select
-              className="weather-select"
-              value={selectedCountry}
-              onChange={e => setSelectedCountry(e.target.value)}
-              style={{ width:'100%' }}
-            >
-              {WEATHER_COUNTRIES.map(c => {
-                const cwd = weatherData[c.id];
-                const temp = cwd ? cwd.current.toFixed(1) : '—';
-                return <option key={c.id} value={c.id}>{c.flag} {c.label} {temp !== '—' ? `· ${temp}°C` : ''}</option>;
-              })}
-            </select>
+        {/* Price + Weather Chart */}
+        <div className="card" style={{ padding:'10px 14px' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#111827', marginBottom:4 }}>
+            📈 {product.label} Price + Temperature — {country.flag} {country.label}
           </div>
-          {/* Desktop: pill buttons */}
-          <div className="weather-desktop-country-pills" style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-            {WEATHER_COUNTRIES.map(c => {
-              const cwd = weatherData[c.id];
-              const temp = cwd ? cwd.current : null;
-              const col = temp != null ? tempColor(temp) : '#9CA3AF';
-              return (
-                <button key={c.id} onClick={() => setSelectedCountry(c.id)}
-                  style={{ padding:'5px 10px', borderRadius:8, border:`1.5px solid ${c.id===selectedCountry?col:'#E5E7EB'}`,
-                    background: c.id===selectedCountry ? col+'18' : '#fff', cursor:'pointer', fontSize:11, fontWeight:600,
-                    color: c.id===selectedCountry ? col : '#6B7280', display:'flex', alignItems:'center', gap:4,
-                    transition:'all 0.18s', fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-                  {c.flag} {c.label.split('(')[0].trim()}
-                  {temp != null && <span style={{ fontSize:10, color:col }}>· {temp.toFixed(1)}°</span>}
-                </button>
-              );
-            })}
+          <div style={{ fontSize:11, color:'#9CA3AF', marginBottom:8 }}>
+            🟢 Solid = price history · 🟢 Dashed = 30-day forecast · 🟠 = temperature
+          </div>
+          <div style={{ height:220, position:'relative' }}>
+            <canvas ref={chartRef}/>
           </div>
         </div>
       </div>
 
-      {infoVisible && (
-        <div style={{ marginTop:14, padding:'12px 16px', background:'#F0F2F8', borderRadius:10, fontSize:12, color:'#6B7280', display:'flex', gap:8, alignItems:'flex-start', position:'relative' }}>
-          <span style={{ flexShrink:0 }}>ℹ️</span>
-          <span>
-            <strong>Temperature:</strong> Live Open-Meteo API · auto-refreshes daily ·
-            <strong> Prices:</strong> CALCONUT + Eurostat COMEXT + WITS WorldBank + ITC TradeMap + OEC ·
-            Green = {pd?.product || 'product'} price · Orange = temperature °C · All values to 2–3 decimals.
-          </span>
-          <button onClick={() => setInfoVisible(false)} style={{ position:'absolute', top:8, right:10, background:'none', border:'none', cursor:'pointer', fontSize:16, color:'#9CA3AF', lineHeight:1, padding:'2px 6px', borderRadius:4 }} title="Dismiss">×</button>
+      {/* ── All countries quick overview for this product ── */}
+      <div className="card">
+        <div className="card-title">🌐 All Growing Regions for {product.label}</div>
+        <div className="card-subtitle">Click any region to update the chart above</div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(170px, 1fr))', gap:10, marginTop:12 }}>
+          {relevantCountries.map(c => {
+            const cwd = weatherData[c.id];
+            const temp = cwd?.current ?? null;
+            const col = temp != null ? tempColor(temp) : '#9CA3AF';
+            const isSelected = c.id === selectedCountry;
+            return (
+              <div key={c.id}
+                onClick={() => setSelectedCountry(c.id)}
+                style={{ padding:'10px 12px', border:`2px solid ${isSelected ? '#6366F1' : '#E5E7EB'}`, borderRadius:10, cursor:'pointer', background: isSelected ? '#F5F3FF' : '#fff', transition:'all 0.15s' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+                  <span style={{ fontSize:16 }}>{c.flag}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#374151' }}>{c.label}</span>
+                </div>
+                {temp != null ? (
+                  <div style={{ fontSize:13, fontWeight:700, color: col }}>🌡️ {temp.toFixed(1)}°C</div>
+                ) : (
+                  <div style={{ fontSize:11, color:'#D1D5DB' }}>Loading…</div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
+
+      {/* ── Sources info ── */}
+      <div className="card" style={{ marginTop:16, background:'#F9FAFB', border:'1px solid #E5E7EB' }}>
+        <div style={{ fontSize:12, fontWeight:700, color:'#374151', marginBottom:6 }}>📚 Forecast Sources for {product.label}</div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+          {(PRODUCT_SOURCES[selectedProduct] || ['FAOSTAT','Eurostat','INC']).map((s, i) => (
+            <span key={i} style={{ padding:'3px 10px', background:'#EEF2FF', color:'#6366F1', borderRadius:20, fontSize:11, fontWeight:600 }}>{s}</span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
+
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('token'));

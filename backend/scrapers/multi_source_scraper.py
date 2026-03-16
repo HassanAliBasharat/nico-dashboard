@@ -43,13 +43,26 @@ JSON_HEADERS = {
 
 # ── IndexMundi URL slugs per product ────────────────────────
 INDEXMUNDI_SLUGS = {
-    "almond":        "almonds",
-    "cashew":        "cashew-nuts",
-    "pistachio":     "pistachios",
-    "walnut":        "walnuts",
-    "raisin":        "raisins",
-    "date":          "dates",
-    "dried_fig":     "figs",
+    "almond":          "almonds",
+    "cashew":          "cashew-nuts",
+    "pistachio":       "pistachios",
+    "walnut":          "walnuts",
+    "raisin":          "raisins",
+    "date":            "dates",
+    "dried_fig":       "figs",
+    "hazelnut":        "hazelnuts",
+    "pecan":           "pecans",
+    "macadamia":       "macadamia-nuts",
+    "brazil_nut":      "brazil-nuts",
+    "pine_nut":        "pine-nuts",
+    "dried_mango":     "mango",
+    "dried_cranberry": "cranberries",
+    "dried_blueberry": "blueberries",
+    "banana_chip":     "bananas",
+    "dried_apple":     "apples",
+    "dried_papaya":    "papaya",
+    "dried_apricot":   "apricots",
+    "prune":           "prunes",
     "dried_apricot": "apricots",
 }
 
@@ -87,14 +100,26 @@ FAOSTAT_MAP = {
 
 # ── UN Comtrade HS codes ─────────────────────────────────────
 COMTRADE_HS = {
-    "almond":        "080211",
-    "cashew":        "080131",
-    "pistachio":     "080250",
-    "walnut":        "080231",
-    "raisin":        "080620",
-    "date":          "080410",
-    "dried_fig":     "080420",
-    "dried_apricot": "081310",
+    "almond":          "080211",
+    "cashew":          "080131",
+    "pistachio":       "080250",
+    "walnut":          "080231",
+    "raisin":          "080620",
+    "date":            "080410",
+    "dried_fig":       "080420",
+    "dried_apricot":   "081310",
+    "hazelnut":        "080221",
+    "pecan":           "080290",
+    "brazil_nut":      "080121",
+    "macadamia":       "080260",
+    "pine_nut":        "080291",
+    "dried_mango":     "081340",
+    "dried_cranberry": "081340",
+    "dried_blueberry": "081340",
+    "banana_chip":     "200819",
+    "dried_apple":     "081310",
+    "dried_papaya":    "081340",
+    "prune":           "081320",
 }
 
 ALL_PRODUCTS = list(INDEXMUNDI_SLUGS.keys())
