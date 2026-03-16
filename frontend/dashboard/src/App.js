@@ -1564,8 +1564,10 @@ function WeatherForecast({ currency }) {
     if (!mapReady || !mapRef.current) return;
     const L = window.L;
     if (!leafletMapRef.current) {
-      leafletMapRef.current = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
+      leafletMapRef.current = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: true })
         .setView([20, 30], 2);
+      leafletMapRef.current.touchZoom.enable();
+      leafletMapRef.current.doubleClickZoom.enable();
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap', maxZoom: 10
       }).addTo(leafletMapRef.current);
@@ -1788,29 +1790,26 @@ function WeatherForecast({ currency }) {
         ))}
       </div>
 
-      {/* ── Map + Chart side by side ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
-        {/* Map */}
-        <div className="card" style={{ padding:0, overflow:'hidden' }}>
-          <div style={{ padding:'10px 14px 6px', borderBottom:'1px solid #F3F4F6' }}>
-            <div style={{ fontSize:13, fontWeight:700, color:'#111827' }}>🗺️ Growing Regions — {product.label}</div>
-            <div style={{ fontSize:11, color:'#9CA3AF' }}>Click a marker to select that country</div>
-          </div>
-          {loadingWeather && <div style={{ padding:'8px 14px', fontSize:11, color:'#6366F1' }}>⏳ Loading weather data…</div>}
-          <div ref={mapRef} style={{ height:260, width:'100%' }}/>
+      {/* ── Map full width ── */}
+      <div className="card" style={{ padding:0, overflow:'hidden', marginBottom:16 }}>
+        <div style={{ padding:'10px 14px 6px', borderBottom:'1px solid #F3F4F6' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#111827' }}>🗺️ Growing Regions — {product.label}</div>
+          <div style={{ fontSize:11, color:'#9CA3AF' }}>Click a marker to select that country · Pinch or scroll to zoom</div>
         </div>
+        {loadingWeather && <div style={{ padding:'8px 14px', fontSize:11, color:'#6366F1' }}>⏳ Loading weather data…</div>}
+        <div ref={mapRef} style={{ height:420, width:'100%' }}/>
+      </div>
 
-        {/* Price + Weather Chart */}
-        <div className="card" style={{ padding:'10px 14px' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:'#111827', marginBottom:4 }}>
-            📈 {product.label} Price + Temperature — {country.flag} {country.label}
-          </div>
-          <div style={{ fontSize:11, color:'#9CA3AF', marginBottom:8 }}>
-            🟢 Solid = price history · 🟢 Dashed = 30-day forecast · 🟠 = temperature
-          </div>
-          <div style={{ height:220, position:'relative' }}>
-            <canvas ref={chartRef}/>
-          </div>
+      {/* ── Price + Weather Chart full width ── */}
+      <div className="card" style={{ padding:'14px 16px', marginBottom:16 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:'#111827', marginBottom:4 }}>
+          📈 {product.label} Price + Temperature — {country.flag} {country.label}
+        </div>
+        <div style={{ fontSize:11, color:'#9CA3AF', marginBottom:10 }}>
+          🟢 Solid = price history · 🟢 Dashed = 30-day forecast · 🟠 = temperature
+        </div>
+        <div style={{ height:300, position:'relative' }}>
+          <canvas ref={chartRef}/>
         </div>
       </div>
 
