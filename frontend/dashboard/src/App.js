@@ -692,6 +692,30 @@ const NETHERLANDS_SUPPLY_DATA = [
   { product:'Pepita’s droog geroosterd', origin:'Netherlands supply', packaging:'DOOS 10 KG', qty:'10 kg', availability:'Valid Mar 2026', price:5.50, source:'NL List', note:'Item 828502 · €55,00 per box' },
   { product:'Zonnebloempitten A-kwaliteit', origin:'Netherlands supply', packaging:'BAAL 25 KG', qty:'25 kg', availability:'Valid Mar 2026', price:1.75, source:'NL List', note:'Item 821792 · €43,75 per bale' },
 ];
+/* NL product category mapping — for tab organisation */
+const NL_CATEGORIES = {
+  'Amandelen':     ['amand', 'amandelsc', 'amandelp', 'droogger roosterd amand', 'rookamand'],
+  'Cashewnoten':   ['cashew'],
+  'Hazelnoten':    ['hazeln'],
+  'Macadamia':     ['macadamia'],
+  'Paranoten':     ['paranot'],
+  'Pecannoten':    ['pecan'],
+  'Pistachenoten': ['pistach'],
+  'Walnoten':      ['walnot'],
+  "Pinda's":       ['pinda', 'doppinda'],
+  'Fruit Gedroogd':['cranberr', 'gojib', 'moerbeib', 'aardbei', 'ananas', 'bananench', 'kokos', 'mango', 'papaj', 'abrik', 'dadel', 'krenten', 'rozijn'],
+  'Pitten & Zaden':['pijnboomp', 'chiazaad', 'pepita', 'zonnebl'],
+};
+
+function getNLCategory(productName) {
+  const lower = productName.toLowerCase();
+  for (const [cat, keywords] of Object.entries(NL_CATEGORIES)) {
+    if (keywords.some(k => lower.includes(k))) return cat;
+  }
+  return 'Overig';
+}
+
+
 
 /* ─────────────────────────────────────────────
    SUPPLIER CATALOG COMPONENT — fully responsive
@@ -699,18 +723,98 @@ const NETHERLANDS_SUPPLY_DATA = [
 function SupplierCatalog({ fmt, currency }) {
   const [activeTab, setActiveTab] = useState('Almonds');
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name');
   const [showCharts, setShowCharts] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadBanner, setUploadBanner] = useState('');
+  const [uploadedData, setUploadedData] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nico_catalog_upload') || 'null'); } catch { return null; }
+  });
+  const scFileRef = React.useRef(null);
   const tabsRef = React.useRef(null);
 
   const scroll = (dir) => {
     if (tabsRef.current) tabsRef.current.scrollBy({ left: dir * 180, behavior: 'smooth' });
   };
 
-  const rows = (CATALOG_DATA[activeTab] || []).filter(r =>
+  /* Merge uploaded data into catalog */
+  const mergedCatalogData = React.useMemo(() => {
+    if (!uploadedData?.items?.length) return CATALOG_DATA;
+    const merged = {};
+    Object.keys(CATALOG_DATA).forEach(tab => {
+      merged[tab] = [...CATALOG_DATA[tab]];
+    });
+    uploadedData.items.forEach(item => {
+      // Find which tab this product belongs to
+      let placed = false;
+      Object.keys(merged).forEach(tab => {
+        const idx = merged[tab].findIndex(e =>
+          e.product.toLowerCase().trim() === item.product.toLowerCase().trim()
+        );
+        if (idx >= 0) {
+          merged[tab][idx] = { ...merged[tab][idx], ...item, isNew: true, uploadedAt: uploadedData.uploadedAt };
+          placed = true;
+        }
+      });
+      if (!placed) {
+        // Add to most relevant tab based on product name
+        const tabKey = Object.keys(merged).find(t =>
+          item.product.toLowerCase().includes(t.toLowerCase().split('/')[0].toLowerCase())
+        ) || activeTab;
+        merged[tabKey] = [...(merged[tabKey]||[]), { ...item, isNew: true, uploadedAt: uploadedData.uploadedAt }];
+      }
+    });
+    return merged;
+  }, [uploadedData, activeTab]);
+
+  const handleCatalogUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    setUploadBanner('');
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result.split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const isPDF = file.type === 'application/pdf';
+      const msgContent = isPDF ? [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+        { type: 'text', text: 'Extract ALL product price data from this supplier catalog/offer document. Return ONLY a valid JSON array. Each item: product (string), price (number, EUR/kg), origin (string), packaging (string), availability (string), note (string). No markdown, no explanation — just the JSON array.' }
+      ] : [
+        { type: 'text', text: `Extract ALL product price data from the supplier catalog document named "${file.name}". Return ONLY a valid JSON array. Each item: product (string), price (number, EUR/kg), origin (string), packaging (string), availability (string), note (string). No markdown, no explanation.` }
+      ];
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, messages: [{ role: 'user', content: msgContent }] })
+      });
+      const data = await response.json();
+      const text = data.content?.map(c => c.text || '').join('') || '';
+      const clean = text.replace(/```json|```/g, '').trim();
+      const items = JSON.parse(clean);
+      if (!Array.isArray(items) || items.length === 0) throw new Error('No products found');
+      const result = { items, uploadedAt: new Date().toISOString(), fileName: file.name, count: items.length };
+      localStorage.setItem('nico_catalog_upload', JSON.stringify(result));
+      setUploadedData(result);
+      setUploadBanner(`✅ ${items.length} products extracted from ${file.name}`);
+    } catch (err) {
+      setUploadBanner('⚠️ Could not extract data: ' + (err.message || 'Check file format'));
+    }
+    setUploading(false);
+  };
+
+  const rows = (mergedCatalogData[activeTab] || []).filter(r =>
     !search ||
     r.product.toLowerCase().includes(search.toLowerCase()) ||
     (r.origin||'').toLowerCase().includes(search.toLowerCase())
-  );
+  ).sort((a, b) => {
+    if (sortBy === 'price_asc') return (a.price||0) - (b.price||0);
+    if (sortBy === 'price_desc') return (b.price||0) - (a.price||0);
+    if (sortBy === 'new') return (b.isNew?1:0) - (a.isNew?1:0);
+    return a.product.localeCompare(b.product);
+  });
 
   const fmtCatalog = (eurVal) => {
     if (!eurVal && eurVal !== 0) return '—';
@@ -932,7 +1036,15 @@ function SupplierCatalog({ fmt, currency }) {
 
 function NetherlandsSupplyCatalog({ currency }) {
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name'); // name | price_asc | price_desc | new
+  const [activeTab, setActiveTab] = useState('All');
   const [bannerVisible, setBannerVisible] = useState(true);
+  const [uploadData, setUploadData] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nico_nl_upload') || 'null'); } catch { return null; }
+  });
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = React.useRef(null);
 
   const fmtCatalog = (eurVal) => {
     if (!eurVal && eurVal !== 0) return '—';
@@ -940,77 +1052,231 @@ function NetherlandsSupplyCatalog({ currency }) {
     return '$' + (eurVal / 0.92).toFixed(2);
   };
 
-  const rows = NETHERLANDS_SUPPLY_DATA.filter(r =>
-    !search ||
-    r.product.toLowerCase().includes(search.toLowerCase()) ||
-    r.origin.toLowerCase().includes(search.toLowerCase())
-  );
+  /* Merge base data with any uploaded data */
+  const allData = React.useMemo(() => {
+    if (!uploadData?.items?.length) return NETHERLANDS_SUPPLY_DATA;
+    const uploadTs = uploadData.uploadedAt;
+    const merged = [...NETHERLANDS_SUPPLY_DATA];
+    uploadData.items.forEach(newItem => {
+      const existingIdx = merged.findIndex(e =>
+        e.product.toLowerCase().trim() === newItem.product.toLowerCase().trim()
+      );
+      if (existingIdx >= 0) {
+        merged[existingIdx] = { ...merged[existingIdx], ...newItem, uploadedAt: uploadTs, isNew: true };
+      } else {
+        merged.push({ ...newItem, uploadedAt: uploadTs, isNew: true });
+      }
+    });
+    return merged;
+  }, [uploadData]);
+
+  /* All unique NL category tabs */
+  const allTabs = React.useMemo(() => {
+    const cats = new Set(allData.map(r => getNLCategory(r.product)));
+    const ordered = Object.keys(NL_CATEGORIES).filter(c => cats.has(c));
+    if (cats.has('Overig')) ordered.push('Overig');
+    return ['All', ...ordered];
+  }, [allData]);
+
+  /* Filter + sort */
+  const rows = React.useMemo(() => {
+    let filtered = allData.filter(r => {
+      const matchSearch = !search ||
+        r.product.toLowerCase().includes(search.toLowerCase()) ||
+        (r.origin||'').toLowerCase().includes(search.toLowerCase());
+      const matchTab = activeTab === 'All' || getNLCategory(r.product) === activeTab;
+      return matchSearch && matchTab;
+    });
+    if (sortBy === 'price_asc') filtered.sort((a, b) => (a.price||0) - (b.price||0));
+    else if (sortBy === 'price_desc') filtered.sort((a, b) => (b.price||0) - (a.price||0));
+    else if (sortBy === 'new') filtered.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
+    else filtered.sort((a, b) => a.product.localeCompare(b.product));
+    return filtered;
+  }, [allData, search, sortBy, activeTab]);
+
+  /* Upload handler — uses Claude AI to extract structured data from the document */
+  const handleUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result.split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+
+      const isPDF = file.type === 'application/pdf';
+      const isDocx = file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc');
+
+      const msgContent = isPDF ? [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+        { type: 'text', text: `Extract ALL product price data from this Netherlands supply/wholesale list document.
+Return ONLY valid JSON array with no markdown, no explanation.
+Each item must have: product (string), price (number, EUR per kg), packaging (string), availability (string), note (string).
+Example: [{"product":"Amandelen diced 3-5","price":8.60,"packaging":"DOOS 12,5 KG","availability":"Valid Mar 2026","note":"Item 802164"}]
+Extract every product you can find. Return only the JSON array.` }
+      ] : [
+        { type: 'text', text: `The following is text extracted from a Netherlands supply/wholesale document (${file.name}).
+Extract ALL product price data.
+Return ONLY valid JSON array with no markdown, no explanation.
+Each item: product (string), price (number EUR/kg), packaging (string), availability (string), note (string).
+File content (base64 truncated, filename: ${file.name}): [document uploaded]` }
+      ];
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content: msgContent }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content?.map(c => c.text || '').join('') || '';
+      const clean = text.replace(/```json|```/g, '').trim();
+      const items = JSON.parse(clean);
+
+      if (!Array.isArray(items) || items.length === 0) throw new Error('No products extracted');
+
+      const uploadResult = {
+        items,
+        uploadedAt: new Date().toISOString(),
+        fileName: file.name,
+        count: items.length,
+      };
+      localStorage.setItem('nico_nl_upload', JSON.stringify(uploadResult));
+      setUploadData(uploadResult);
+    } catch (err) {
+      setUploadError('Could not extract data: ' + (err.message || 'Unknown error'));
+    }
+    setUploading(false);
+  };
+
+  const newCount = allData.filter(r => r.isNew).length;
+  const daysSinceUpload = uploadData ? Math.floor((Date.now() - new Date(uploadData.uploadedAt)) / 86400000) : null;
 
   return (
     <div className="page fade-up">
       <div className="page-header">
-        <div className="page-title">Netherlands Supply</div>
-        <div className="page-subtitle">Netherlands wholesale list · 01–31/03/2026 · prices in EUR · {currency} display</div>
+        <div className="page-title">🇳🇱 Netherlands Supply</div>
+        <div className="page-subtitle">
+          {uploadData ? `${uploadData.fileName} · uploaded ${daysSinceUpload === 0 ? 'today' : daysSinceUpload + 'd ago'}` : 'Netherlands wholesale list · 01–31/03/2026'}
+          {' · '}{currency} display
+        </div>
       </div>
 
+      {/* Upload banner */}
       {bannerVisible && (
-        <div style={{ background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:12, padding:'12px 18px', marginBottom:20, display:'flex', alignItems:'flex-start', gap:12, position:'relative' }}>
-          <span style={{ fontSize:18, flexShrink:0, marginTop:1 }}>🇳🇱</span>
-          <div>
-            <div style={{ fontWeight:700, fontSize:13, color:'#4338CA' }}>Netherlands Supply — Fixed List</div>
+        <div style={{ background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:12, padding:'12px 18px', marginBottom:16, display:'flex', alignItems:'flex-start', gap:12, position:'relative', flexWrap:'wrap' }}>
+          <span style={{ fontSize:18, flexShrink:0 }}>🇳🇱</span>
+          <div style={{ flex:'1 1 200px' }}>
+            <div style={{ fontWeight:700, fontSize:13, color:'#4338CA' }}>Netherlands Supply — Auto-update from document</div>
             <div style={{ fontSize:12, color:'#6B7280', marginTop:2 }}>
-              Wholesale list valid from <strong>01/03/2026</strong> to <strong>31/03/2026</strong>. Prices per kg / unit in EUR, converted to USD when USD is selected.
+              Upload a new PDF or Word price list and NICO will automatically extract all products and update prices.
+              {uploadData && <span style={{ color:'#10B981', marginLeft:6 }}>✅ Last upload: {uploadData.fileName} ({uploadData.count} products)</span>}
             </div>
           </div>
-          <button onClick={() => setBannerVisible(false)} style={{ position:'absolute', top:8, right:10, background:'none', border:'none', cursor:'pointer', fontSize:16, color:'#9CA3AF', lineHeight:1, padding:'2px 6px', borderRadius:4 }} title="Dismiss">×</button>
+          <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
+            <input ref={fileInputRef} type="file" accept=".pdf,.docx,.doc,.txt" style={{ display:'none' }}
+              onChange={e => e.target.files[0] && handleUpload(e.target.files[0])} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              style={{ padding:'7px 16px', background:'#6366F1', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', opacity: uploading ? 0.7 : 1 }}>
+              {uploading ? '⏳ Reading...' : '📄 Upload Price List'}
+            </button>
+            {uploadData && (
+              <button onClick={() => { localStorage.removeItem('nico_nl_upload'); setUploadData(null); }}
+                style={{ padding:'7px 12px', background:'#FEF2F2', color:'#EF4444', border:'1px solid #FCA5A5', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                Reset
+              </button>
+            )}
+          </div>
+          {uploadError && <div style={{ width:'100%', fontSize:12, color:'#EF4444', marginTop:4 }}>⚠️ {uploadError}</div>}
+          <button onClick={() => setBannerVisible(false)} style={{ position:'absolute', top:8, right:10, background:'none', border:'none', cursor:'pointer', fontSize:16, color:'#9CA3AF' }}>×</button>
         </div>
       )}
 
-      <div className="card">
-        <div style={{ marginBottom:16, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search Netherlands supply..."
-            style={{ padding:'8px 14px', border:'1.5px solid #E5E7EB', borderRadius:9, fontSize:13, fontFamily:"'Plus Jakarta Sans',sans-serif", outline:'none', width:260, minWidth:160, color:'#1A1D2E', background:'#FAFAFA', flex:'1 1 180px' }}
-          />
+      {/* NEW badge strip */}
+      {newCount > 0 && (
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, marginBottom:14, fontSize:12, color:'#166534' }}>
+          <span>✨</span>
+          <span><strong>{newCount} updated/new products</strong> from latest upload — highlighted in green below.
+            {daysSinceUpload !== null && daysSinceUpload <= 7 && <span style={{ marginLeft:6, background:'#DCFCE7', color:'#15803D', padding:'1px 8px', borderRadius:20, fontWeight:700 }}>NEW</span>}
+          </span>
+        </div>
+      )}
+
+      {/* Category tabs */}
+      <div style={{ overflowX:'auto', marginBottom:0, WebkitOverflowScrolling:'touch' }}>
+        <div style={{ display:'flex', gap:4, borderBottom:'2px solid #E5E7EB', paddingBottom:0, minWidth:'max-content' }}>
+          {allTabs.map(t => (
+            <button key={t} onClick={() => setActiveTab(t)}
+              style={{ padding:'8px 16px', border:'none', background:'none', cursor:'pointer', fontSize:13, fontWeight: activeTab===t ? 700 : 500,
+                color: activeTab===t ? '#6366F1' : '#6B7280',
+                borderBottom: activeTab===t ? '2px solid #6366F1' : '2px solid transparent',
+                marginBottom:-2, whiteSpace:'nowrap', transition:'all 0.15s' }}>
+              {t}
+              <span style={{ marginLeft:4, fontSize:10, background: activeTab===t ? '#EEF2FF' : '#F3F4F6', color: activeTab===t ? '#6366F1' : '#9CA3AF', padding:'1px 6px', borderRadius:10 }}>
+                {t === 'All' ? allData.length : allData.filter(r => getNLCategory(r.product) === t).length}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ borderTopLeftRadius:0, borderTopRightRadius:0, borderTop:'none' }}>
+        {/* Controls */}
+        <div style={{ marginBottom:14, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search products..."
+            style={{ padding:'8px 14px', border:'1.5px solid #E5E7EB', borderRadius:9, fontSize:13, fontFamily:"'Plus Jakarta Sans',sans-serif", outline:'none', flex:'1 1 180px', maxWidth:280, color:'#1A1D2E', background:'#FAFAFA' }} />
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+            style={{ padding:'8px 12px', border:'1.5px solid #E5E7EB', borderRadius:9, fontSize:13, background:'#fff', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
+            <option value="name">Sort: Name A→Z</option>
+            <option value="price_asc">Sort: Price Low→High</option>
+            <option value="price_desc">Sort: Price High→Low</option>
+            <option value="new">Sort: New First</option>
+          </select>
           <span style={{ fontSize:12, color:'#9CA3AF', whiteSpace:'nowrap' }}>{rows.length} item{rows.length!==1?'s':''}</span>
         </div>
 
         <div className="table-scroll-wrap">
-          <table className="data-table" style={{ minWidth:780 }}>
+          <table className="data-table" style={{ minWidth:700 }}>
             <thead>
               <tr>
                 <th style={{ minWidth:220 }}>Product</th>
                 <th style={{ minWidth:110 }}>Packaging</th>
-                <th style={{ minWidth:80 }}>Qty</th>
+                <th style={{ minWidth:90 }}>Price/kg</th>
                 <th style={{ minWidth:90 }}>Availability</th>
-                <th style={{ minWidth:80 }}>Price/unit</th>
-                <th style={{ minWidth:80 }}>Origin</th>
-                <th style={{ minWidth:120 }}>Source</th>
-                <th style={{ minWidth:200 }}>Notes</th>
+                <th style={{ minWidth:100 }}>Category</th>
+                <th style={{ minWidth:160 }}>Notes</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={8} style={{ textAlign:'center', color:'#D1D5DB', padding:32 }}>No products found</td></tr>
+                <tr><td colSpan={6} style={{ textAlign:'center', color:'#D1D5DB', padding:32 }}>No products found</td></tr>
               )}
               {rows.map((row, i) => (
-                <tr key={i}>
+                <tr key={i} style={{ background: row.isNew ? 'rgba(16,185,129,0.04)' : undefined }}>
                   <td>
-                    <div style={{ fontWeight:600, fontSize:13 }}>{row.product}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <div style={{ fontWeight:600, fontSize:13 }}>{row.product}</div>
+                      {row.isNew && daysSinceUpload !== null && daysSinceUpload <= 7 && (
+                        <span style={{ fontSize:9, background:'#DCFCE7', color:'#15803D', padding:'1px 6px', borderRadius:20, fontWeight:800, flexShrink:0 }}>NEW</span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ fontSize:11, color:'#9CA3AF', fontFamily:"'JetBrains Mono',monospace" }}>{row.packaging}</td>
-                  <td style={{ fontSize:12, color:'#6B7280', whiteSpace:'nowrap' }}>{row.qty}</td>
-                  <td>
-                    <span className="badge badge-blue">{row.availability}</span>
-                  </td>
                   <td style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:700, fontSize:13, color:'#6366F1' }}>
                     {fmtCatalog(row.price)}
                   </td>
-                  <td style={{ fontSize:12, color:'#6B7280' }}>{row.origin}</td>
-                  <td>
-                    <span className="badge badge-purple">{row.source}</span>
-                  </td>
+                  <td><span className="badge badge-blue">{row.availability}</span></td>
+                  <td><span className="badge badge-purple">{getNLCategory(row.product)}</span></td>
                   <td style={{ fontSize:11, color:'#9CA3AF' }}>{row.note}</td>
                 </tr>
               ))}
@@ -1250,6 +1516,48 @@ function volatilityBadge(v) {
 
 function Top5Catalog({ currency }) {
   const [activeTab, setActiveTab] = useState('Walnuts');
+  const [sortBy, setSortBy] = useState('rank');
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState('');
+  const [uploadedTop5, setUploadedTop5] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nico_top5_upload') || 'null'); } catch { return null; }
+  });
+  const top5FileRef = React.useRef(null);
+
+  const handleTop5Upload = async (file) => {
+    if (!file) return;
+    setUploading(true); setUploadMsg('');
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result.split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const isPDF = file.type === 'application/pdf';
+      const msgContent = isPDF ? [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+        { type: 'text', text: 'Extract the top products data from this price offer document. For each product found return JSON: product (string), origin (string), type (string), grade (string), priceRange (string like "€X.XX – €Y.YY"), note (string), calconutPrice (number or null). Return ONLY a valid JSON array, no markdown.' }
+      ] : [
+        { type: 'text', text: `Extract top product price data from "${file.name}". Return ONLY a JSON array with fields: product, origin, type, grade, priceRange (like "€X.XX – €Y.YY"), note, calconutPrice (number). No markdown.` }
+      ];
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 3000, messages: [{ role: 'user', content: msgContent }] })
+      });
+      const data = await response.json();
+      const text = data.content?.map(c => c.text || '').join('') || '';
+      const items = JSON.parse(text.replace(/```json|```/g, '').trim());
+      if (!Array.isArray(items) || !items.length) throw new Error('No data');
+      const result = { items, uploadedAt: new Date().toISOString(), fileName: file.name };
+      localStorage.setItem('nico_top5_upload', JSON.stringify(result));
+      setUploadedTop5(result);
+      setUploadMsg('✅ ' + items.length + ' products extracted');
+    } catch (e) {
+      setUploadMsg('⚠️ ' + (e.message || 'Error'));
+    }
+    setUploading(false);
+  };
   const [search, setSearch] = useState('');
   const [bannerVisible, setBannerVisible] = useState(true);
   const tabsRef = React.useRef(null);
@@ -1278,6 +1586,30 @@ function Top5Catalog({ currency }) {
       <div className="page-header">
         <div className="page-title">⭐ TOP 5 Products</div>
         <div className="page-subtitle">20 categories · NICO product list · EU wholesale benchmarks · {currency} display</div>
+      </div>
+
+      {/* Upload + sort controls */}
+      <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', marginBottom:14 }}>
+        <input ref={top5FileRef} type="file" accept=".pdf,.docx,.doc" style={{ display:'none' }}
+          onChange={e => e.target.files[0] && handleTop5Upload(e.target.files[0])} />
+        <button onClick={() => top5FileRef.current?.click()} disabled={uploading}
+          style={{ padding:'7px 14px', background:'#6366F1', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', opacity: uploading ? 0.7 : 1 }}>
+          {uploading ? '⏳ Reading...' : '📄 Upload New Price List'}
+        </button>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+          style={{ padding:'7px 12px', border:'1.5px solid #E5E7EB', borderRadius:8, fontSize:12, background:'#fff', cursor:'pointer' }}>
+          <option value="rank">Sort: Rank</option>
+          <option value="price_asc">Price Low→High</option>
+          <option value="price_desc">Price High→Low</option>
+          <option value="new">New First</option>
+        </select>
+        {uploadMsg && <span style={{ fontSize:12, color: uploadMsg.startsWith('✅') ? '#10B981' : '#EF4444' }}>{uploadMsg}</span>}
+        {uploadedTop5 && (
+          <button onClick={() => { localStorage.removeItem('nico_top5_upload'); setUploadedTop5(null); }}
+            style={{ padding:'5px 10px', background:'#FEF2F2', color:'#EF4444', border:'1px solid #FCA5A5', borderRadius:8, fontSize:11, cursor:'pointer' }}>
+            Reset Upload
+          </button>
+        )}
       </div>
 
       {/* Info banner — dismissible */}
