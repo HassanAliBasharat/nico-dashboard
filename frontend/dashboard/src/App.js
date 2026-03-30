@@ -723,14 +723,14 @@ function getNLCategory(productName) {
 function SupplierCatalog({ fmt, currency }) {
   const [activeTab, setActiveTab] = useState('Almonds');
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('name'); // eslint-disable-line no-unused-vars
   const [showCharts, setShowCharts] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadBanner, setUploadBanner] = useState('');
+  const [uploading, setUploading] = useState(false); // eslint-disable-line no-unused-vars
+  const [uploadBanner, setUploadBanner] = useState(''); // eslint-disable-line no-unused-vars
   const [uploadedData, setUploadedData] = useState(() => {
     try { return JSON.parse(localStorage.getItem('nico_catalog_upload') || 'null'); } catch { return null; }
   });
-  const scFileRef = React.useRef(null);
+  const scFileRef = React.useRef(null); // eslint-disable-line no-unused-vars
   const tabsRef = React.useRef(null);
 
   const scroll = (dir) => {
@@ -767,7 +767,7 @@ function SupplierCatalog({ fmt, currency }) {
     return merged;
   }, [uploadedData, activeTab]);
 
-  const handleCatalogUpload = async (file) => {
+  const handleCatalogUpload = async (file) => { // eslint-disable-line no-unused-vars
     if (!file) return;
     setUploading(true);
     setUploadBanner('');
@@ -1108,7 +1108,7 @@ function NetherlandsSupplyCatalog({ currency }) {
       });
 
       const isPDF = file.type === 'application/pdf';
-      const isDocx = file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc');
+      const isDocx = file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc'); // eslint-disable-line no-unused-vars
 
       const msgContent = isPDF ? [
         { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
