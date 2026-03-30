@@ -10,17 +10,33 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointEleme
 
 const API = 'https://web-production-c20a2.up.railway.app';
 
-const ALL_PRODUCTS = ['almond','cashew','pistachio','walnut','raisin','date','dried_fig','dried_apricot'];
+const ALL_PRODUCTS = [
+  'almond','cashew','pistachio','walnut','raisin','date','dried_fig','dried_apricot',
+  'hazelnut','pecan','brazil_nut','macadamia','pine_nut',
+  'dried_mango','dried_cranberry','dried_blueberry','banana_chip','dried_apple','dried_papaya','prune'
+];
 
 const PRODUCT_META = {
-  almond:        { label: 'Almonds',        emoji: '🌰', color: '#E8A838', origin: 'USA · Spain · Australia' },
-  cashew:        { label: 'Cashews',        emoji: '🥜', color: '#10B981', origin: 'Vietnam · India · Ivory Coast' },
-  pistachio:     { label: 'Pistachios',     emoji: '💚', color: '#6366F1', origin: 'USA · Iran · Turkey' },
-  walnut:        { label: 'Walnuts',        emoji: '🟤', color: '#F59E0B', origin: 'USA · China · Chile' },
-  raisin:        { label: 'Raisins',        emoji: '🍇', color: '#8B5CF6', origin: 'USA · Turkey · Iran' },
-  date:          { label: 'Dates',          emoji: '🌴', color: '#EF4444', origin: 'Saudi Arabia · UAE · Tunisia' },
-  dried_fig:     { label: 'Dried Figs',     emoji: '🫐', color: '#EC4899', origin: 'Turkey · Morocco · Greece' },
-  dried_apricot: { label: 'Dried Apricots', emoji: '🍑', color: '#F97316', origin: 'Turkey · USA · Uzbekistan' },
+  almond:          { label: 'Almonds',           emoji: '🌰', color: '#E8A838', origin: 'USA · Spain · Australia' },
+  cashew:          { label: 'Cashews',           emoji: '🥜', color: '#10B981', origin: 'Vietnam · India · Ivory Coast' },
+  pistachio:       { label: 'Pistachios',        emoji: '💚', color: '#6366F1', origin: 'USA · Iran · Turkey' },
+  walnut:          { label: 'Walnuts',           emoji: '🟤', color: '#F59E0B', origin: 'USA · China · Chile' },
+  raisin:          { label: 'Raisins',           emoji: '🍇', color: '#8B5CF6', origin: 'USA · Turkey · Iran' },
+  date:            { label: 'Dates',             emoji: '🌴', color: '#EF4444', origin: 'Saudi Arabia · UAE · Tunisia' },
+  dried_fig:       { label: 'Dried Figs',        emoji: '🟫', color: '#EC4899', origin: 'Turkey · Morocco · Iran' },
+  dried_apricot:   { label: 'Dried Apricots',    emoji: '🍑', color: '#F97316', origin: 'Turkey · USA · Uzbekistan' },
+  hazelnut:        { label: 'Hazelnuts',         emoji: '🌰', color: '#92400E', origin: 'Turkey · Georgia · Italy' },
+  pecan:           { label: 'Pecans',            emoji: '🥜', color: '#D97706', origin: 'USA · Mexico' },
+  brazil_nut:      { label: 'Brazil Nuts',       emoji: '🫘', color: '#065F46', origin: 'Peru · Bolivia · Brazil' },
+  macadamia:       { label: 'Macadamia',         emoji: '⚪', color: '#6B7280', origin: 'Kenya · South Africa · Australia' },
+  pine_nut:        { label: 'Pine Nuts',         emoji: '🌲', color: '#166534', origin: 'China · Russia · Pakistan' },
+  dried_mango:     { label: 'Dried Mango',       emoji: '🥭', color: '#F59E0B', origin: 'Thailand · Philippines · India' },
+  dried_cranberry: { label: 'Dried Cranberries', emoji: '🔴', color: '#DC2626', origin: 'USA · Canada' },
+  dried_blueberry: { label: 'Dried Blueberries', emoji: '🫐', color: '#4F46E5', origin: 'USA · Chile' },
+  banana_chip:     { label: 'Dried Banana Chips',emoji: '🍌', color: '#CA8A04', origin: 'Philippines · Ecuador' },
+  dried_apple:     { label: 'Dried Apple',       emoji: '🍎', color: '#16A34A', origin: 'China · Chile · Poland' },
+  dried_papaya:    { label: 'Dried Papaya',      emoji: '🧡', color: '#EA580C', origin: 'Thailand · Brazil · Mexico' },
+  prune:           { label: 'Prunes',            emoji: '🫐', color: '#7C3AED', origin: 'USA · France · Chile' },
 };
 
 const NAV_ITEMS = [
@@ -407,14 +423,26 @@ const CATALOG_TABS = [
    Sources: Eurostat https://ec.europa.eu/eurostat · WITS https://wits.worldbank.org
             ITC TradeMap https://trademap.org · OEC https://oec.world ──────────────────── */
 const EU_MARKET_BENCHMARKS = {
-  almond:        { low: 5.80, high: 7.20, avg: 6.50, source: 'Eurostat/ITC TradeMap' },
-  cashew:        { low: 5.20, high: 7.50, avg: 6.20, source: 'WITS WorldBank' },
-  pistachio:     { low: 8.50, high: 12.00, avg: 9.80, source: 'OEC/ITC TradeMap' },
-  walnut:        { low: 3.80, high: 6.50, avg: 5.10, source: 'Eurostat COMEXT' },
-  raisin:        { low: 1.80, high: 3.00, avg: 2.35, source: 'WITS WorldBank' },
-  date:          { low: 3.50, high: 7.00, avg: 5.20, source: 'ITC TradeMap' },
-  dried_fig:     { low: 2.50, high: 4.80, avg: 3.60, source: 'Eurostat/OEC' },
-  dried_apricot: { low: 3.20, high: 6.50, avg: 4.80, source: 'WITS/Eurostat' },
+  almond:          { low: 5.80, high: 7.20,  avg: 6.50,  source: 'Eurostat/ITC TradeMap' },
+  cashew:          { low: 5.20, high: 7.50,  avg: 6.20,  source: 'WITS WorldBank' },
+  pistachio:       { low: 8.50, high: 12.00, avg: 9.80,  source: 'OEC/ITC TradeMap' },
+  walnut:          { low: 3.80, high: 6.50,  avg: 5.10,  source: 'Eurostat COMEXT' },
+  raisin:          { low: 1.80, high: 3.00,  avg: 2.35,  source: 'WITS WorldBank' },
+  date:            { low: 3.50, high: 7.00,  avg: 5.20,  source: 'ITC TradeMap' },
+  dried_fig:       { low: 2.50, high: 4.80,  avg: 3.60,  source: 'Eurostat/OEC' },
+  dried_apricot:   { low: 3.20, high: 6.50,  avg: 4.80,  source: 'WITS/Eurostat' },
+  hazelnut:        { low: 9.00, high: 16.00, avg: 12.00, source: 'Eurostat/INC' },
+  pecan:           { low: 9.00, high: 14.00, avg: 11.50, source: 'USDA ERS/Eurostat' },
+  brazil_nut:      { low: 10.50,high: 14.00, avg: 12.20, source: 'FAOSTAT/Eurostat' },
+  macadamia:       { low: 12.00,high: 17.00, avg: 14.00, source: 'FAOSTAT/Eurostat' },
+  pine_nut:        { low: 24.00,high: 32.00, avg: 27.50, source: 'Eurostat COMEXT' },
+  dried_mango:     { low: 3.50, high: 5.50,  avg: 4.50,  source: 'FAOSTAT/Eurostat' },
+  dried_cranberry: { low: 3.50, high: 4.80,  avg: 4.10,  source: 'USDA ERS/Eurostat' },
+  dried_blueberry: { low: 5.50, high: 9.00,  avg: 7.00,  source: 'FAOSTAT/Eurostat' },
+  banana_chip:     { low: 2.80, high: 4.00,  avg: 3.40,  source: 'Eurostat/FAOSTAT' },
+  dried_apple:     { low: 3.00, high: 5.50,  avg: 4.20,  source: 'Eurostat/FAOSTAT' },
+  dried_papaya:    { low: 3.00, high: 4.50,  avg: 3.70,  source: 'Eurostat/FAOSTAT' },
+  prune:           { low: 3.80, high: 6.00,  avg: 4.80,  source: 'USDA ERS/Eurostat' },
 };
 
 /* ── TOP 5 NICO product list (Walnuts → Dried Papaya) from docx, with CALCONUT & EU market data ── */
@@ -1856,6 +1884,171 @@ function WeatherForecast({ currency }) {
 }
 
 
+/* ══════════════════════════════════════════════════════════════
+   MARKET INTELLIGENCE COMPONENT
+   Based on ChatGPT analysis recommendations from Nico_details.docx:
+   - Crop calendar per product
+   - Price drivers / event impact rules
+   - Confidence scoring
+   - Source stack per product
+   ══════════════════════════════════════════════════════════════ */
+
+const CROP_CALENDAR = {
+  almond:          { bloom:'Feb–Mar', harvest:'Aug–Sep', export:'Sep–Dec', risk:'Feb–Apr frost', marketing:'Aug–Jul' },
+  walnut:          { bloom:'Mar–Apr', harvest:'Sep–Oct', export:'Oct–Jan', risk:'Apr frost', marketing:'Sep–Aug' },
+  pistachio:       { bloom:'Mar–Apr', harvest:'Aug–Sep', export:'Sep–Dec', risk:'Mar–Apr frost', marketing:'Sep–Aug' },
+  cashew:          { bloom:'Nov–Jan', harvest:'Feb–May', export:'Apr–Jul', risk:'Jan–Feb dry', marketing:'Feb–Jan' },
+  hazelnut:        { bloom:'Jan–Feb', harvest:'Aug–Sep', export:'Sep–Feb', risk:'Feb frost', marketing:'Sep–Aug' },
+  pecan:           { bloom:'Apr–May', harvest:'Oct–Nov', export:'Nov–Feb', risk:'Apr frost', marketing:'Oct–Sep' },
+  brazil_nut:      { bloom:'Oct–Nov', harvest:'Jan–Mar', export:'Mar–Jun', risk:'Dec–Jan drought', marketing:'Jan–Dec' },
+  macadamia:       { bloom:'Jul–Sep', harvest:'Mar–Jul', export:'Jun–Oct', risk:'Aug heat', marketing:'Apr–Mar' },
+  raisin:          { bloom:'Mar–Apr', harvest:'Aug–Sep', export:'Sep–Dec', risk:'Aug rain', marketing:'Sep–Aug' },
+  pine_nut:        { bloom:'Apr–May', harvest:'Sep–Oct', export:'Oct–Jan', risk:'Sep–Oct rain', marketing:'Oct–Sep' },
+  dried_mango:     { bloom:'Dec–Feb', harvest:'Mar–Jun', export:'Apr–Aug', risk:'Feb–Mar heat', marketing:'Mar–Feb' },
+  dried_cranberry: { bloom:'May–Jun', harvest:'Sep–Oct', export:'Oct–Jan', risk:'May frost', marketing:'Oct–Sep' },
+  dried_blueberry: { bloom:'Apr–May', harvest:'Jun–Aug', export:'Jul–Oct', risk:'May frost', marketing:'Jul–Jun' },
+  banana_chip:     { bloom:'Year-round', harvest:'Year-round', export:'Year-round', risk:'Typhoon season', marketing:'Jan–Dec' },
+  dried_apple:     { bloom:'Mar–Apr', harvest:'Aug–Oct', export:'Oct–Feb', risk:'Apr frost', marketing:'Sep–Aug' },
+  dried_papaya:    { bloom:'Year-round', harvest:'Year-round', export:'Year-round', risk:'Rainy season', marketing:'Jan–Dec' },
+  date:            { bloom:'Feb–Mar', harvest:'Sep–Nov', export:'Oct–Jan', risk:'Aug–Sep heat/rain', marketing:'Oct–Sep' },
+  dried_apricot:   { bloom:'Mar–Apr', harvest:'Jun–Jul', export:'Aug–Nov', risk:'Mar–Apr frost', marketing:'Aug–Jul' },
+  dried_fig:       { bloom:'May–Jun', harvest:'Aug–Oct', export:'Oct–Jan', risk:'Aug drought', marketing:'Sep–Aug' },
+  prune:           { bloom:'Feb–Mar', harvest:'Jul–Aug', export:'Sep–Dec', risk:'Feb–Mar frost', marketing:'Aug–Jul' },
+};
+
+const PRICE_DRIVERS = {
+  almond:          ['USA crop report (Aug OCE)', 'Spain harvest size', 'EUR/USD FX', 'Freight costs', 'EU import volume (Eurostat)'],
+  walnut:          ['USDA FAS supply forecast', 'China crop size', 'EUR/USD FX', 'Freight from CA/Chile', 'EU demand trend'],
+  pistachio:       ['Iran export ban risk', 'USA crop (Jul OCE)', 'EUR/USD + IRR/USD', 'Turkey supply', 'Sanctions impact'],
+  cashew:          ['Vietnam processing capacity', 'Ivory Coast harvest', 'INC supply balance', 'EUR/USD FX', 'Freight from Asia'],
+  hazelnut:        ['Turkey frost events (Feb–Apr)', 'Fiskobirlik price', 'EUR/TRY FX', 'Eurostat import values', 'Black Sea exports'],
+  pecan:           ['USDA ERS crop estimate', 'US export demand', 'China import appetite', 'EUR/USD FX', 'Freight'],
+  brazil_nut:      ['Bolivia harvest weather', 'Amazon deforestation policy', 'Freight from South America', 'EU import volume'],
+  macadamia:       ['Kenya/SA crop size', 'China demand', 'EUR/USD FX', 'Freight from East Africa/Australia'],
+  raisin:          ['Turkey sultana harvest', 'Iran crop size', 'California supply', 'EUR/TRY FX', 'EU import price'],
+  pine_nut:        ['China supply restrictions', 'Russia export policy', 'Freight to EU', 'Eurostat import values'],
+  dried_mango:     ['Thailand/Philippines crop', 'Monsoon timing', 'Freight from SE Asia', 'EUR/THB FX'],
+  dried_cranberry: ['USDA ERS US crop', 'Canadian production', 'EUR/USD FX', 'Demand from EU food industry'],
+  dried_blueberry: ['US/Chile harvest', 'EUR/USD FX', 'EU retail demand', 'Freight'],
+  banana_chip:     ['Philippines typhoon season', 'Freight from Asia', 'EUR/PHP FX', 'EU food industry demand'],
+  dried_apple:     ['China crop size', 'Chile harvest', 'EUR/CNY FX', 'EU import volume (Eurostat)'],
+  dried_papaya:    ['Thailand crop', 'Rainy season timing', 'EUR/THB FX', 'Freight from SE Asia'],
+  date:            ['Saudi Arabia harvest size', 'Tunisia export policy', 'EUR/USD + local FX', 'Eurostat EU import values', 'CBS StatLine NL'],
+  dried_apricot:   ['Turkey frost (Mar–Apr)', 'Uzbekistan supply', 'EUR/TRY FX', 'Eurostat import values', 'INC statistics'],
+  dried_fig:       ['Turkey crop (Jul–Aug)', 'EUR/TRY FX', 'Eurostat EU import values', 'INC statistics'],
+  prune:           ['USDA ERS US supply', 'France harvest size', 'EUR/USD FX', 'EU retail demand'],
+};
+
+const CONFIDENCE_SCORES = {
+  almond:72, walnut:70, pistachio:65, cashew:68, hazelnut:60,
+  pecan:62, brazil_nut:55, macadamia:57, raisin:66, pine_nut:52,
+  dried_mango:50, dried_cranberry:63, dried_blueberry:58, banana_chip:48,
+  dried_apple:53, dried_papaya:46, date:64, dried_apricot:61,
+  dried_fig:59, prune:65,
+};
+
+const SOURCE_STACK = {
+  almond:          ['Almond Board CA', 'USDA FAS', 'USDA ERS', 'INC', 'Eurostat', 'IndexMundi'],
+  walnut:          ['USDA FAS', 'USDA ERS', 'INC', 'Eurostat', 'UN Comtrade'],
+  pistachio:       ['American Pistachio Growers', 'USDA FAS', 'INC', 'Iran Pistachio Assoc', 'Eurostat'],
+  cashew:          ['INC', 'FAOSTAT', 'Eurostat', 'VINACAS', 'UN Comtrade'],
+  hazelnut:        ['INC', 'Eurostat', 'TurkStat', 'Fiskobirlik', 'Copernicus'],
+  pecan:           ['USDA ERS', 'USDA FAS', 'FAOSTAT', 'Eurostat'],
+  brazil_nut:      ['FAOSTAT', 'Eurostat', 'Bolivia INE', 'UN Comtrade'],
+  macadamia:       ['FAOSTAT', 'Eurostat', 'Australian Macadamias', 'SAMAC'],
+  raisin:          ['INC', 'Eurostat', 'California Raisins', 'TurkStat'],
+  pine_nut:        ['Eurostat', 'FAOSTAT', 'China customs', 'UN Comtrade'],
+  dried_mango:     ['FAOSTAT', 'Eurostat', 'Thailand OAE', 'Open-Meteo'],
+  dried_cranberry: ['USDA ERS', 'USDA FAS', 'Eurostat'],
+  dried_blueberry: ['USDA FAS', 'FAOSTAT', 'Eurostat'],
+  banana_chip:     ['FAOSTAT', 'Eurostat', 'Philippines PSA'],
+  dried_apple:     ['FAOSTAT', 'Eurostat', 'China customs'],
+  dried_papaya:    ['FAOSTAT', 'Eurostat', 'Thailand OAE'],
+  date:            ['Eurostat', 'CBS StatLine', 'FAOSTAT', 'Tunisia MOA', 'ECB FX'],
+  dried_apricot:   ['INC', 'Eurostat', 'TurkStat', 'Copernicus', 'ECB FX'],
+  dried_fig:       ['INC', 'Eurostat', 'TurkStat', 'UN Comtrade'],
+  prune:           ['USDA ERS', 'USDA FAS', 'Eurostat', 'France AgriMer'],
+};
+
+function MarketIntelligence({ product, currency }) {
+  const cal = CROP_CALENDAR[product] || {};
+  const drivers = PRICE_DRIVERS[product] || [];
+  const confidence = CONFIDENCE_SCORES[product] || 50;
+  const sources = SOURCE_STACK[product] || [];
+  const meta = PRODUCT_META[product];
+  const sym = currency === 'EUR' ? '€' : '$';
+  const confColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
+  const confLabel = confidence >= 70 ? 'High' : confidence >= 55 ? 'Medium' : 'Low';
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+        <div style={{ fontSize:18 }}>{meta?.emoji}</div>
+        <div>
+          <div style={{ fontSize:14, fontWeight:800, color:'#1A1D2E' }}>{meta?.label} — Market Intelligence</div>
+          <div style={{ fontSize:11, color:'#9CA3AF' }}>Based on crop calendar · price drivers · source stack · confidence scoring</div>
+        </div>
+        <div style={{ marginLeft:'auto', textAlign:'center', background: confColor + '18', border:`1.5px solid ${confColor}`, borderRadius:10, padding:'6px 14px' }}>
+          <div style={{ fontSize:11, fontWeight:700, color: confColor }}>CONFIDENCE</div>
+          <div style={{ fontSize:20, fontWeight:800, color: confColor }}>{confidence}/100</div>
+          <div style={{ fontSize:10, color: confColor }}>{confLabel}</div>
+        </div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:14 }}>
+        {/* Crop Calendar */}
+        <div className="card" style={{ padding:'12px 14px' }}>
+          <div className="card-title" style={{ marginBottom:10 }}>🌱 Crop Calendar</div>
+          {[
+            { label:'🌸 Bloom / Flowering', val: cal.bloom },
+            { label:'🌿 Harvest Window', val: cal.harvest },
+            { label:'📦 Export Season', val: cal.export },
+            { label:'⚠️ Key Risk Window', val: cal.risk },
+            { label:'📅 Marketing Year', val: cal.marketing },
+          ].map((row, i) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'5px 0', borderBottom: i < 4 ? '1px solid #F3F4F6' : 'none' }}>
+              <span style={{ fontSize:12, color:'#6B7280' }}>{row.label}</span>
+              <span style={{ fontSize:12, fontWeight:600, color:'#1A1D2E' }}>{row.val || '—'}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Price Drivers */}
+        <div className="card" style={{ padding:'12px 14px' }}>
+          <div className="card-title" style={{ marginBottom:10 }}>📊 Key Price Drivers</div>
+          {drivers.map((d, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 0', borderBottom: i < drivers.length-1 ? '1px solid #F3F4F6' : 'none' }}>
+              <div style={{ width:6, height:6, borderRadius:'50%', background:'#6366F1', flexShrink:0 }}/>
+              <span style={{ fontSize:12, color:'#374151' }}>{d}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Formula + Sources */}
+        <div className="card" style={{ padding:'12px 14px' }}>
+          <div className="card-title" style={{ marginBottom:10 }}>💡 Pricing Formula</div>
+          <div style={{ fontSize:11, color:'#6B7280', lineHeight:1.7, marginBottom:12 }}>
+            <code style={{ background:'#F3F4F6', padding:'6px 10px', borderRadius:6, display:'block', fontSize:11, color:'#374151', lineHeight:1.8 }}>
+              Expected {sym}/kg =<br/>
+              Origin USD/kg<br/>
+              × ECB USD/EUR rate<br/>
+              + Freight uplift<br/>
+              + EU import premium
+            </code>
+          </div>
+          <div className="card-title" style={{ marginBottom:8, fontSize:11 }}>📚 Data Sources</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+            {sources.map((s, i) => (
+              <span key={i} style={{ padding:'2px 8px', background:'#EEF2FF', color:'#6366F1', borderRadius:20, fontSize:10, fontWeight:600 }}>{s}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('token'));
   const [tab, setTab] = useState('dashboard');
@@ -2195,6 +2388,12 @@ export default function App() {
                 </div>
               </div>
 
+              {/* SCRAPER NOTICE */}
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, marginBottom:16, fontSize:12, color:'#166534' }}>
+                <span style={{ fontSize:15 }}>🤖</span>
+                <span><strong>Live scraped data</strong> — All prices on this page are automatically collected by NICO's web scraper from multiple sources across the internet. Click <strong>Scrape Data</strong> to fetch the latest prices.</span>
+              </div>
+
               {/* UPGRADE BANNER */}
               {showUpgradeBanner && (
                 <div className="upgrade-banner" style={{ position: 'relative' }}>
@@ -2396,6 +2595,12 @@ export default function App() {
                 <div className="page-subtitle">Historical trends & 30-day AI forecast</div>
               </div>
 
+              {/* SCRAPER NOTICE */}
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, marginBottom:16, fontSize:12, color:'#166534' }}>
+                <span style={{ fontSize:15 }}>🤖</span>
+                <span><strong>Live scraped data</strong> — Price history and forecasts are built from data automatically scraped from global commodity databases, government APIs, and wholesale marketplaces. Data updates every time you click Scrape Data.</span>
+              </div>
+
               {/* Product selector */}
               <div className="product-pills" style={{ marginBottom: 20 }}>
                 {ALL_PRODUCTS.map(p => (
@@ -2449,6 +2654,9 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              {/* ── MARKET INTELLIGENCE (from doc analysis) ── */}
+              <MarketIntelligence product={selectedProduct} currency={currency} />
             </div>
           )}
 
@@ -2459,8 +2667,15 @@ export default function App() {
             <div className="page fade-up">
               <div className="page-header">
                 <div className="page-title">All Products</div>
-                <div className="page-subtitle">8 dry fruits tracked · click any card for details</div>
+                <div className="page-subtitle">20 categories tracked · click any card for price analytics</div>
               </div>
+
+              {/* SCRAPER NOTICE */}
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, marginBottom:16, fontSize:12, color:'#166534' }}>
+                <span style={{ fontSize:15 }}>🤖</span>
+                <span><strong>Live scraped data</strong> — All product prices are collected automatically by NICO's intelligent scraper from IndexMundi, USDA, FAOSTAT, UN Comtrade, Alibaba, and other sources. Prices reflect the latest available market data.</span>
+              </div>
+
               <div className="product-grid">
                 {ALL_PRODUCTS.map(p => {
                   const m = PRODUCT_META[p];
