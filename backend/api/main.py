@@ -19,7 +19,29 @@ from backend.database.db import get_db, engine
 from backend.database.models import Base, DryfruitPrice, User
 from backend.services.price_service import get_all_prices, get_prices_by_product
 
+# ─── Intelligence modules (new) ──────────────────────────────────────────────
+try:
+    from backend.services.risk_engine import calculate_risk, get_latest_risk
+    from backend.services.forecast_engine import generate_forecast
+    from backend.services.substitution_engine import get_substitutes, calculate_opportunity
+    from backend.services.llm_layer import explain_risk, explain_forecast, generate_opportunity_narrative
+    from backend.database.models_intelligence import (
+        RiskSignal, WeatherEvent, ForecastFeature, ProductSubstitute, OpportunityFlag
+    )
+    INTELLIGENCE_AVAILABLE = True
+except ImportError as _ie:
+    print(f"Intelligence modules not loaded: {_ie}")
+    INTELLIGENCE_AVAILABLE = False
+
 Base.metadata.create_all(bind=engine)
+
+# Create intelligence tables if intelligence modules are loaded
+if INTELLIGENCE_AVAILABLE:
+    try:
+        from backend.database.models_intelligence import Base as IntelBase
+        IntelBase.metadata.create_all(bind=engine)
+    except Exception as _e:
+        print(f"Intelligence table creation: {_e}")
 
 # ─── Settings — read from environment, fall back to local defaults ──────────────
 #
@@ -206,6 +228,182 @@ def predict(product: str, db: Session = Depends(get_db), _=Depends(get_current_u
 # ─── Background scraper ──────────────────────────────────────────────────────────
 
 scrape_status = {"running": False, "last_run": None, "last_result": None, "error": None}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# INTELLIGENCE API ROUTES
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.get("/risk/{product_id}")
+def get_risk(product_id: str, _=Depends(get_current_user)):
+    """
+    Supply risk score for a product.
+    Checks DB cache first (6hr TTL), recalculates if stale.
+    Returns: risk_score (0-100), availability (LOW/NORMAL/HIGH),
+             triggered_events, explanation, crop_stage
+    """
+    if not INTELLIGENCE_AVAILABLE:
+        return {"product_id": product_id, "risk_score": 10, "availability": "NORMAL",
+                "triggered_events": [], "explanation": "Intelligence module not available.", "crop_stage": "unknown"}
+    # Try cache first
+    cached = get_latest_risk(product_id)
+    if cached:
+        return cached
+    # Recalculate
+    result = calculate_risk(product_id, save_to_db=True)
+    # Enrich with LLM explanation
+    result["explanation"] = explain_risk(
+        product_id, result["risk_score"],
+        result.get("triggered_events", []),
+        result["availability"],
+        result.get("crop_stage", "unknown")
+    )
+    return result
+
+
+@app.get("/forecast/{product_id}")
+def get_forecast(product_id: str, _=Depends(get_current_user)):
+    """
+    Hybrid price forecast for a product (30-day horizon).
+    Uses LightGBM if ≥20 data points, otherwise enhanced linear.
+    Returns: base_forecast, adjusted_forecast, forecast_low/high,
+             confidence_score, trend, main_drivers, change_pct
+    """
+    if not INTELLIGENCE_AVAILABLE:
+        return {"product_id": product_id, "adjusted_forecast": None,
+                "confidence_score": 0, "trend": "STABLE",
+                "explanation": "Intelligence module not available."}
+    # Get current risk to feed into forecast
+    risk = calculate_risk(product_id, save_to_db=False)
+    risk_score = risk.get("risk_score", 10)
+    risk_events = risk.get("triggered_events", [])
+
+    result = generate_forecast(product_id, risk_score=risk_score,
+                               risk_events=risk_events, save_to_db=True)
+    # Add LLM explanation
+    result["explanation"] = explain_forecast(
+        product_id,
+        result.get("base_forecast", 0),
+        result.get("adjusted_forecast", 0),
+        result.get("change_pct", 0),
+        result.get("trend", "STABLE"),
+        result.get("main_drivers", [])
+    )
+    return result
+
+
+@app.get("/opportunity/{product_id}")
+def get_opportunity(product_id: str, _=Depends(get_current_user)):
+    """
+    Purchasing opportunity recommendation for a product.
+    Returns: opportunity_score, recommended_action, action_label,
+             urgency, explanation, narrative
+    """
+    if not INTELLIGENCE_AVAILABLE:
+        return {"product_id": product_id, "recommended_action": "WAIT",
+                "action_label": "Intelligence module not available.", "opportunity_score": 0}
+    # Compute fresh risk + forecast
+    risk = calculate_risk(product_id, save_to_db=False)
+    forecast = generate_forecast(
+        product_id,
+        risk_score=risk.get("risk_score", 10),
+        risk_events=risk.get("triggered_events", []),
+        save_to_db=False
+    )
+    subs = get_substitutes(product_id, risk.get("risk_score", 10))
+    top_sub = subs[0] if subs else None
+
+    result = calculate_opportunity(
+        product_id=product_id,
+        risk_score=risk.get("risk_score", 10),
+        forecast_change_pct=forecast.get("change_pct", 0),
+        availability=risk.get("availability", "NORMAL"),
+        triggered_events=risk.get("triggered_events", []),
+        save_to_db=True
+    )
+    # Add LLM narrative
+    result["narrative"] = generate_opportunity_narrative(
+        product_id,
+        result["recommended_action"],
+        result["urgency"],
+        result["explanation"],
+        substitute_label=top_sub.get("substitute_label") if top_sub else None
+    )
+    result["forecast"] = forecast
+    result["risk"] = risk
+    return result
+
+
+@app.get("/substitutes/{product_id}")
+def get_substitutes_route(product_id: str, _=Depends(get_current_user)):
+    """
+    Alternative sourcing options for a product.
+    When supply is stressed, returns alternatives ranked by availability + price.
+    """
+    if not INTELLIGENCE_AVAILABLE:
+        return {"product_id": product_id, "substitutes": []}
+    risk = calculate_risk(product_id, save_to_db=False)
+    subs = get_substitutes(product_id, risk.get("risk_score", 10))
+    return {
+        "product_id":   product_id,
+        "risk_score":   risk.get("risk_score", 10),
+        "availability": risk.get("availability", "NORMAL"),
+        "substitutes":  subs,
+    }
+
+
+@app.get("/intelligence/{product_id}")
+def get_full_intelligence(product_id: str, _=Depends(get_current_user)):
+    """
+    Full intelligence bundle for a product in one call.
+    Used by frontend Analytics page to load all intelligence data at once.
+    Returns: risk, forecast, opportunity, substitutes, explanation
+    """
+    if not INTELLIGENCE_AVAILABLE:
+        return {"product_id": product_id, "available": False}
+
+    risk     = calculate_risk(product_id, save_to_db=True)
+    forecast = generate_forecast(
+        product_id,
+        risk_score=risk.get("risk_score", 10),
+        risk_events=risk.get("triggered_events", []),
+        save_to_db=True
+    )
+    opportunity = calculate_opportunity(
+        product_id=product_id,
+        risk_score=risk.get("risk_score", 10),
+        forecast_change_pct=forecast.get("change_pct", 0),
+        availability=risk.get("availability", "NORMAL"),
+        triggered_events=risk.get("triggered_events", []),
+        save_to_db=True
+    )
+    subs = get_substitutes(product_id, risk.get("risk_score", 10))
+
+    # LLM enrichment
+    risk["explanation"]         = explain_risk(product_id, risk["risk_score"],
+                                               risk.get("triggered_events", []),
+                                               risk["availability"],
+                                               risk.get("crop_stage", "unknown"))
+    forecast["explanation"]     = explain_forecast(product_id,
+                                                   forecast.get("base_forecast", 0),
+                                                   forecast.get("adjusted_forecast", 0),
+                                                   forecast.get("change_pct", 0),
+                                                   forecast.get("trend", "STABLE"),
+                                                   forecast.get("main_drivers", []))
+    opportunity["narrative"]    = generate_opportunity_narrative(
+        product_id, opportunity["recommended_action"], opportunity["urgency"],
+        opportunity["explanation"],
+        substitute_label=subs[0].get("substitute_label") if subs else None
+    )
+
+    return {
+        "product_id":   product_id,
+        "available":    True,
+        "risk":         risk,
+        "forecast":     forecast,
+        "opportunity":  opportunity,
+        "substitutes":  subs[:3],
+    }
+
 
 def run_scraper_background():
     global scrape_status

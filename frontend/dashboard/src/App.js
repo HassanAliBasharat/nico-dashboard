@@ -2302,7 +2302,17 @@ const SOURCE_STACK = {
   prune:           ['USDA ERS', 'USDA FAS', 'Eurostat', 'France AgriMer'],
 };
 
-function MarketIntelligence({ product, currency }) {
+function MarketIntelligence({ product, currency, liveIntel, loadingIntel }) {
+  /* liveIntel structure from /intelligence/{product_id}:
+     { risk: {risk_score, availability, triggered_events, explanation},
+       forecast: {adjusted_forecast, confidence_score, trend, change_pct, forecast_low, forecast_high, explanation},
+       opportunity: {recommended_action, action_label, urgency, opportunity_score, narrative},
+       substitutes: [{substitute_label, origin, price_diff_pct, availability_score, quality_match, reason}] }
+  */
+  const liveRisk       = liveIntel?.risk;
+  const liveForecast   = liveIntel?.forecast;
+  const liveOpportunity= liveIntel?.opportunity;
+  const liveSubstitutes= liveIntel?.substitutes || [];
   const cal = CROP_CALENDAR[product] || {};
   const drivers = PRICE_DRIVERS[product] || [];
   const confidence = CONFIDENCE_SCORES[product] || 50;
@@ -2312,8 +2322,131 @@ function MarketIntelligence({ product, currency }) {
   const confColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
   const confLabel = confidence >= 70 ? 'High' : confidence >= 55 ? 'Medium' : 'Low';
 
+  const riskScore    = liveRisk?.risk_score ?? confidence;
+  const availability = liveRisk?.availability ?? 'NORMAL';
+  const riskColor    = riskScore >= 65 ? '#EF4444' : riskScore >= 35 ? '#F59E0B' : '#10B981';
+  const riskLabel    = riskScore >= 65 ? 'HIGH RISK' : riskScore >= 35 ? 'MEDIUM RISK' : 'LOW RISK';
+  const actionColors = {BUY_EARLY:'#10B981', WAIT:'#3B82F6', SWITCH_ORIGIN:'#F59E0B', HOLD_STOCK:'#F97316'};
+  const action       = liveOpportunity?.recommended_action;
+  const actionColor  = actionColors[action] || '#6B7280';
+
   return (
     <div style={{ marginTop: 16 }}>
+
+      {/* ── LIVE INTELLIGENCE BANNER ── */}
+      {loadingIntel && (
+        <div style={{ padding:'8px 14px', background:'#EEF2FF', borderRadius:10, fontSize:12, color:'#6366F1', marginBottom:12 }}>
+          ⏳ Loading live intelligence data...
+        </div>
+      )}
+
+      {liveIntel && !loadingIntel && (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:12, marginBottom:16 }}>
+
+          {/* Risk Score Badge */}
+          <div style={{ padding:'12px 16px', background: riskColor + '12', border:`2px solid ${riskColor}`, borderRadius:12 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:riskColor, textTransform:'uppercase', marginBottom:4 }}>⚠️ Supply Risk</div>
+            <div style={{ fontSize:26, fontWeight:900, color:riskColor }}>{riskScore.toFixed(0)}<span style={{ fontSize:14 }}>/100</span></div>
+            <div style={{ fontSize:11, fontWeight:700, color:riskColor }}>{riskLabel}</div>
+            <div style={{ fontSize:11, color:'#6B7280', marginTop:4 }}>Availability: <strong>{availability}</strong></div>
+          </div>
+
+          {/* Forecast Card */}
+          {liveForecast && (
+            <div style={{ padding:'12px 16px', background:'#F0FDF4', border:'2px solid #BBF7D0', borderRadius:12 }}>
+              <div style={{ fontSize:10, fontWeight:800, color:'#166534', textTransform:'uppercase', marginBottom:4 }}>📈 30-Day Forecast</div>
+              <div style={{ fontSize:22, fontWeight:900, color:'#166534' }}>
+                {currency === 'EUR' ? '€' : '$'}{liveForecast.adjusted_forecast?.toFixed(3) ?? '—'}/kg
+              </div>
+              <div style={{ fontSize:11, color: liveForecast.change_pct > 0 ? '#EF4444' : '#10B981', fontWeight:700 }}>
+                {liveForecast.change_pct >= 0 ? '▲' : '▼'} {Math.abs(liveForecast.change_pct || 0).toFixed(1)}% vs today
+              </div>
+              <div style={{ fontSize:10, color:'#9CA3AF', marginTop:3 }}>
+                Confidence: {liveForecast.confidence_score?.toFixed(0)}% · {liveForecast.trend}
+              </div>
+            </div>
+          )}
+
+          {/* Action Panel */}
+          {liveOpportunity && (
+            <div style={{ padding:'12px 16px', background: actionColor + '12', border:`2px solid ${actionColor}`, borderRadius:12 }}>
+              <div style={{ fontSize:10, fontWeight:800, color:actionColor, textTransform:'uppercase', marginBottom:4 }}>💡 Recommended Action</div>
+              <div style={{ fontSize:13, fontWeight:800, color:actionColor }}>{action?.replace('_',' ')}</div>
+              <div style={{ fontSize:10, color:'#6B7280', marginTop:4, lineHeight:1.5 }}>
+                Urgency: <strong style={{ color:actionColor }}>{liveOpportunity.urgency}</strong>
+              </div>
+              <div style={{ fontSize:10, color:'#374151', marginTop:4, lineHeight:1.5 }}>
+                Score: {liveOpportunity.opportunity_score?.toFixed(0)}/100
+              </div>
+            </div>
+          )}
+
+          {/* Forecast Range */}
+          {liveForecast?.forecast_low && (
+            <div style={{ padding:'12px 16px', background:'#FAFAFA', border:'1.5px solid #E5E7EB', borderRadius:12 }}>
+              <div style={{ fontSize:10, fontWeight:800, color:'#374151', textTransform:'uppercase', marginBottom:4 }}>📊 Price Range</div>
+              <div style={{ fontSize:11, color:'#6B7280', marginBottom:6 }}>30-day scenario range</div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, fontWeight:700 }}>
+                <span style={{ color:'#10B981' }}>Low: {currency==='EUR'?'€':'$'}{liveForecast.forecast_low?.toFixed(3)}</span>
+                <span style={{ color:'#EF4444' }}>High: {currency==='EUR'?'€':'$'}{liveForecast.forecast_high?.toFixed(3)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── SUPPLY ALERT BANNER ── */}
+      {liveRisk?.triggered_events?.length > 0 && (
+        <div style={{ padding:'10px 16px', background:'#FEF2F2', border:'2px solid #FCA5A5', borderRadius:12, marginBottom:16, display:'flex', gap:10, alignItems:'flex-start' }}>
+          <span style={{ fontSize:18, flexShrink:0 }}>🚨</span>
+          <div>
+            <div style={{ fontSize:13, fontWeight:800, color:'#DC2626' }}>Supply Alert</div>
+            <div style={{ fontSize:12, color:'#7F1D1D', marginTop:2 }}>{liveRisk.explanation}</div>
+            <div style={{ display:'flex', gap:6, marginTop:6, flexWrap:'wrap' }}>
+              {liveRisk.triggered_events.map((e, i) => (
+                <span key={i} style={{ padding:'2px 8px', background:'#FEE2E2', color:'#DC2626', borderRadius:20, fontSize:10, fontWeight:700 }}>
+                  {e.replace(/_/g,' ').toUpperCase()}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ALTERNATIVE SOURCING PANEL ── */}
+      {liveSubstitutes.length > 0 && (
+        <div className="card" style={{ marginBottom:16, padding:'12px 16px' }}>
+          <div className="card-title" style={{ marginBottom:8 }}>🔄 Alternative Sourcing</div>
+          <div className="card-subtitle" style={{ marginBottom:10 }}>Ranked by availability × price × quality match</div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:10 }}>
+            {liveSubstitutes.slice(0, 3).map((s, i) => (
+              <div key={i} style={{ padding:'10px 12px', border:'1.5px solid #E5E7EB', borderRadius:10, background:'#FAFAFA' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#1A1D2E' }}>{s.substitute_label}</span>
+                  <span style={{ fontSize:10, padding:'1px 7px', borderRadius:20, fontWeight:700,
+                    background: s.quality_match==='EXACT'?'#D1FAE5':s.quality_match==='CLOSE'?'#FEF3C7':'#F3F4F6',
+                    color:      s.quality_match==='EXACT'?'#065F46':s.quality_match==='CLOSE'?'#92400E':'#374151' }}>
+                    {s.quality_match}
+                  </span>
+                </div>
+                <div style={{ fontSize:11, color:'#6B7280' }}>🌍 {s.origin}</div>
+                <div style={{ fontSize:11, color: s.price_diff_pct <= 0 ? '#10B981' : '#EF4444', fontWeight:700, marginTop:2 }}>
+                  {s.price_diff_pct <= 0 ? '↓' : '↑'} {Math.abs(s.price_diff_pct)}% price · Avail: {s.availability_score}/100
+                </div>
+                <div style={{ fontSize:10, color:'#9CA3AF', marginTop:4, lineHeight:1.5 }}>{s.reason}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── OPPORTUNITY NARRATIVE ── */}
+      {liveOpportunity?.narrative && (
+        <div style={{ padding:'10px 16px', background:'#FFFBEB', border:'1.5px solid #FDE68A', borderRadius:12, marginBottom:16, fontSize:12, color:'#92400E' }}>
+          <strong>💡 AI Recommendation:</strong> {liveOpportunity.narrative}
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
         <div style={{ fontSize:18 }}>{meta?.emoji}</div>
@@ -2395,6 +2528,8 @@ export default function App() {
   const [scraping, setScraping] = useState(false);
   const [scrapeProgress, setScrapeProgress] = useState(0);
   const [scrapeSuccess, setScrapeSuccess] = useState(false);
+  const [intelligence, setIntelligence] = useState({});
+  const [loadingIntel, setLoadingIntel] = useState(false);
   const [currency, setCurrency] = useState('USD'); // USD or EUR
   const EUR_RATE = 0.92; // 1 USD = 0.92 EUR (update periodically)
   const fmt = (usdVal) => {
@@ -2437,6 +2572,17 @@ export default function App() {
     } catch { setForecast(null); }
   }, []);
 
+  const fetchIntelligence = useCallback(async (product) => {
+    setLoadingIntel(true);
+    try {
+      const r = await axios.get(`${API}/intelligence/${product}`, { headers: authH() });
+      if (r.data?.available !== false) {
+        setIntelligence(prev => ({ ...prev, [product]: r.data }));
+      }
+    } catch {}
+    setLoadingIntel(false);
+  }, []);
+
   useEffect(() => {
     if (loggedIn) {
       fetchAll();
@@ -2457,8 +2603,9 @@ export default function App() {
     if (loggedIn && selectedProduct) {
       fetchHistory(selectedProduct);
       fetchForecast(selectedProduct);
+      fetchIntelligence(selectedProduct);
     }
-  }, [loggedIn, selectedProduct, fetchHistory, fetchForecast]);
+  }, [loggedIn, selectedProduct, fetchHistory, fetchForecast, fetchIntelligence]);
 
   const handleScrape = async () => {
     setScraping(true);
@@ -2987,8 +3134,13 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ── MARKET INTELLIGENCE (from doc analysis) ── */}
-              <MarketIntelligence product={selectedProduct} currency={currency} />
+              {/* ── MARKET INTELLIGENCE (live + static) ── */}
+              <MarketIntelligence
+                product={selectedProduct}
+                currency={currency}
+                liveIntel={intelligence[selectedProduct] || null}
+                loadingIntel={loadingIntel}
+              />
             </div>
           )}
 
