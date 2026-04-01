@@ -20,6 +20,7 @@ from backend.database.models import Base, DryfruitPrice, User
 from backend.services.price_service import get_all_prices, get_prices_by_product
 
 # ─── Intelligence modules (new) ──────────────────────────────────────────────
+INTELLIGENCE_AVAILABLE = False
 try:
     from backend.services.risk_engine import calculate_risk, get_latest_risk
     from backend.services.forecast_engine import generate_forecast
@@ -29,8 +30,9 @@ try:
         RiskSignal, WeatherEvent, ForecastFeature, ProductSubstitute, OpportunityFlag
     )
     INTELLIGENCE_AVAILABLE = True
-except ImportError as _ie:
-    print(f"Intelligence modules not loaded: {_ie}")
+    print("Intelligence modules loaded OK")
+except Exception as _ie:
+    print(f"Intelligence modules not loaded (non-critical): {_ie}")
     INTELLIGENCE_AVAILABLE = False
 
 Base.metadata.create_all(bind=engine)
@@ -40,8 +42,9 @@ if INTELLIGENCE_AVAILABLE:
     try:
         from backend.database.models_intelligence import Base as IntelBase
         IntelBase.metadata.create_all(bind=engine)
+        print("Intelligence tables created OK")
     except Exception as _e:
-        print(f"Intelligence table creation: {_e}")
+        print(f"Intelligence table creation (non-critical): {_e}")
 
 # ─── Settings — read from environment, fall back to local defaults ──────────────
 #

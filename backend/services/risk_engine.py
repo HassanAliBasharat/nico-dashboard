@@ -19,9 +19,12 @@ from datetime import datetime, date, timedelta
 from typing import Optional
 import os, sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from backend.database.db import SessionLocal
-from backend.database.models_intelligence import RiskSignal, WeatherEvent
+try:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from backend.database.db import SessionLocal
+    from backend.database.models_intelligence import RiskSignal, WeatherEvent
+except Exception:
+    pass
 
 # ─── Crop calendar: bloom and harvest month ranges ──────────────────────────
 # Format: (start_month, end_month) inclusive, 1=Jan, 12=Dec

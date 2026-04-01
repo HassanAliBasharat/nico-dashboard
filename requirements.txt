@@ -12,5 +12,4 @@ python-dotenv
 httpx
 lightgbm
 scikit-learn
-pandas
 numpy

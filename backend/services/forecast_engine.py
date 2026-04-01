@@ -19,7 +19,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 import os, sys
-import numpy as np
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -28,7 +27,26 @@ from backend.database.db import SessionLocal
 from backend.database.models import DryfruitPrice
 from backend.database.models_intelligence import ForecastFeature
 
-# LightGBM is optional — falls back to weighted linear if not installed
+# All heavy deps are optional
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    # Minimal numpy replacement
+    class _np:
+        @staticmethod
+        def mean(x): return sum(x)/len(x) if x else 0
+        @staticmethod
+        def std(x):
+            if not x: return 0
+            m = sum(x)/len(x)
+            return (sum((i-m)**2 for i in x)/len(x))**0.5
+        @staticmethod
+        def array(x, dtype=None): return x
+        floating = (float, int)
+    np = _np()
+
 try:
     import lightgbm as lgb
     LGBM_AVAILABLE = True
