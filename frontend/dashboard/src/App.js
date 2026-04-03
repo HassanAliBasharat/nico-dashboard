@@ -176,22 +176,22 @@ const T = {
     nav_nl:'Offered Price NL', nav_weather:'Weather / Price Forecast',
     nav_alerts:'Alerts', nav_sources:'Sources',
     profile:'Profile', logout:'Log out', refresh:'↻ Refresh', scrape:'⬇ Scrape Data',
-    loading:'{t.loading}', scraping:'Scraping...',
-    overview:'Overview', sources_line:'{t.sources_line}',
+    loading:'Loading...', scraping:'Scraping...',
+    overview:'Overview', sources_line:'Sources: UN Comtrade · USDA · FAOSTAT',
     live_scraped:'Live scraped data',
     live_desc:'All prices on this page are automatically collected by NICO web scraper. Click',
     live_btn:'Scrape Data', live_end:'to fetch the latest prices.',
-    upgrade_title:'{t.upgrade_title}',
-    upgrade_desc:'{t.upgrade_desc}',
-    view_sources:'{t.view_sources}',
-    total_products:'{t.total_products}', avg_price:'{t.avg_price}',
-    most_expensive:'{t.most_expensive}', active_alerts:'{t.active_alerts}',
-    new_this_update:'{t.new_this_update}', across_cats:'{t.across_cats}',
-    price_movements:'{t.price_movements}', all_stable:'{t.all_stable}',
+    upgrade_title:'💎 Upgrade to Premium Data',
+    upgrade_desc:'Connect Vesper, Mintec or Expana for real-time EU benchmark prices & daily feeds.',
+    view_sources:'View Sources →',
+    total_products:'📦 Total Products Tracked', avg_price:'💵 Average Price',
+    most_expensive:'👑 Most Expensive', active_alerts:'🔔 Active Alerts',
+    new_this_update:'+3 new this update', across_cats:'across all categories',
+    price_movements:'price movements detected', all_stable:'all prices stable',
     price_comparison:'Price Comparison', all_products_usd:'All products',
     price_trend:'Price Trend', last_readings:'Last 20 readings · click product card to change',
     latest_prices:'Latest Prices', eu_range_src:'30d EU Range: Eurostat COMEXT · WITS WorldBank',
-    filter_all:'Alles', filter_rising:'Stijgend', filter_falling:'Falling', filter_stable:'Stable',
+    filter_all:'All', filter_rising:'Rising', filter_falling:'Falling', filter_stable:'Stable',
     col_product:'Product', col_price:'Latest Price', col_country:'Country',
     col_source:'Data Source', col_eu_range:'30d EU Range', col_eu_avg:'EU Avg (30d)',
     col_change:'Change', col_status:'Status',
@@ -204,34 +204,34 @@ const T = {
     forecast_30:'30-Day Forecast', linear_proj:'Linear trend projection',
     rising_trend:'▲ Rising trend', falling_trend:'▼ Falling trend',
     no_history:'No history yet · Click Scrape Data first',
-    need_points:'{t.need_points}',
+    need_points:'Need 5+ data points',
     all_products_title:'All Products', cats_tracked:'20 categories tracked · click any card for price analytics',
     products_live:'Live scraped data — All product prices are automatically collected.',
     price_alerts:'Price Alerts', alert_subtitle:'Triggered when price moves ≥3% between readings',
     clear_all:'Clear all', no_alerts:'No Active Alerts', all_normal:'All prices within normal range',
-    intel_scores:'{t.intel_scores}',
-    intel_subtitle:'{t.intel_subtitle}',
+    intel_scores:'📊 Product Intelligence Scores',
+    intel_subtitle:'Confidence score · Buy / Hold / Sell signal for all 20 categories',
     alert_thresholds:'Alert Thresholds', how_triggered:'How alerts are triggered',
     col_alert_type:'Alert Type', col_trigger:'Trigger', col_action:'Action',
-    medium_trigger:'{t.medium_trigger}', high_trigger:'{t.high_trigger}',
-    auto_trigger:'{t.auto_trigger}', shown_panel:'{t.shown_panel}',
-    highlighted:'{t.highlighted}', auto_refresh:'{t.auto_refresh}',
-    data_sources:'Data Sources', sources_subtitle:'{t.sources_subtitle}',
-    active_scraping:'{t.active_scraping}', official_trade:'{t.official_trade}', premium:'{t.premium}',
-    weather_title:'{t.weather_title}',
-    weather_subtitle:'{t.weather_subtitle}',
+    medium_trigger:'Price moves 3–9% vs previous', high_trigger:'Price moves 10%+ vs previous',
+    auto_trigger:'Every 6 hours', shown_panel:'Shown in alert panel',
+    highlighted:'Highlighted prominently', auto_refresh:'Dashboard auto-refreshes',
+    data_sources:'Data Sources', sources_subtitle:'136-source database · UN, USDA, FAO & industry providers',
+    active_scraping:'Active Scraping Sources', official_trade:'Official Trade Sources', premium:'Premium Sources',
+    weather_title:'🌡️ Weather & Price Forecast',
+    weather_subtitle:'20 product categories · live Open-Meteo weather · 12-month view',
     how_to_use:'How to use',
     weather_hint:'Select a product category → the map shows all growing regions → select a country for side-by-side price & weather chart.',
-    product_category:'{t.product_category}', growing_region:'{t.growing_region}',
+    product_category:'📦 PRODUCT CATEGORY', growing_region:'🌍 GROWING REGION / COUNTRY',
     period:'📅 PERIOD',
-    period_1m:'{t.period_1m}', period_3m:'{t.period_3m}', period_6m:'{t.period_6m}', period_12m:'{t.period_12m}',
+    period_1m:'1 Month', period_3m:'3 Months', period_6m:'6 Months', period_12m:'12 Months',
     product_lbl:'Product', region_lbl:'Region', current_price_lbl:'Current Price',
     current_temp:'Current Temp', data_sources_lbl:'Data Sources',
-    map_title:'🗺️ Growing Regions', click_marker:'{t.click_marker}',
+    map_title:'🗺️ Growing Regions', click_marker:'Click a marker to select that country · Pinch or scroll to zoom',
     loading_weather:'⏳ Loading weather data...',
     chart_title:'📈 Price + Temperature',
     legend_hist:'Solid = price history', legend_fore:'Dashed = 30-day forecast', legend_temp:'Orange = temperature',
-    all_regions:'{t.all_regions}', forecast_sources:'{t.forecast_sources}',
+    all_regions:'🌐 All Growing Regions for', forecast_sources:'📚 Forecast Sources for',
     supplier_catalog:'Supplier Catalog', catalog_subtitle:'CALCONUT 09/03/2026 · 24h prices · MOQ 3,000kg',
     upload_price_list:'📄 Upload Price List', reading:'⏳ Reading...',
     upload_success:'✅ products extracted from', upload_error:'⚠️ Could not extract data',
@@ -240,31 +240,31 @@ const T = {
     col_packaging:'Packaging', col_qty:'Qty', col_availability:'Availability',
     col_price_unit:'Price/unit', col_origin:'Origin', col_notes:'Notes', col_category:'Category',
     no_products:'No products found',
-    top5_title:'{t.top5_title}', top5_subtitle:'20 categories · NICO product list · EU wholesale benchmarks',
-    upload_new:'{t.upload_new}', reset_upload:'{t.reset_upload}',
+    top5_title:'⭐ TOP 5 Products', top5_subtitle:'20 categories · NICO product list · EU wholesale benchmarks',
+    upload_new:'📄 Upload New Price List', reset_upload:'Reset Upload',
     rank:'Rank', grade:'Grade', type:'Type', price_range_col:'Price Range', note:'Note',
     hm_label:'HM', top5_eu_range:'EU Range', top5_volatility:'Volatility',
-    nl_title:'🇳🇱 Offered Price NL', nl_subtitle:'{t.nl_subtitle}',
+    nl_title:'🇳🇱 Offered Price NL', nl_subtitle:'Netherlands wholesale list · 01-31/03/2026',
     nl_banner_title:'Offered Price NL — Auto-update from document',
-    nl_banner_desc:'{t.nl_banner_desc}',
+    nl_banner_desc:'Upload a new PDF or Word price list and NICO will automatically extract all products and update prices.',
     last_upload:'Last upload:', nl_items_updated:'updated/new products from latest upload — highlighted in green below.',
-    search_nl:'Search products...', reset:'{t.reset}',
+    search_nl:'Search products...', reset:'Reset',
     market_intel:'Market Intelligence', intel_based:'Based on crop calendar · price drivers · source stack · confidence scoring',
-    loading_intel:'{t.loading_intel}',
-    supply_risk:'{t.supply_risk}', forecast_card:'{t.forecast_card}',
-    recommended_action:'{t.recommended_action}', price_range_card:'{t.price_range_card}',
+    loading_intel:'⏳ Loading live intelligence data...',
+    supply_risk:'⚠️ Supply Risk', forecast_card:'📈 30-Day Forecast',
+    recommended_action:'💡 Recommended Action', price_range_card:'📊 Price Range',
     today:'vs today', urgency_lbl:'Urgency', score_lbl:'Score',
-    supply_alert:'{t.supply_alert}', alt_sourcing:'{t.alt_sourcing}',
-    alt_ranked:'{t.alt_ranked}',
+    supply_alert:'Supply Alert', alt_sourcing:'🔄 Alternative Sourcing',
+    alt_ranked:'Ranked by availability x price x quality match',
     ai_rec:'💡 AI Recommendation',
-    crop_calendar:'{t.crop_calendar}', bloom:'{t.bloom}', harvest:'{t.harvest}',
-    export_season:'{t.export_season}', risk_window:'{t.risk_window}', marketing_year:'{t.marketing_year}',
-    price_drivers:'{t.price_drivers}',
-    pricing_formula:'{t.pricing_formula}', data_sources_card:'📚 Data Sources',
-    confidence_lbl:'{t.confidence_lbl}',
+    crop_calendar:'🌱 Crop Calendar', bloom:'🌸 Bloom / Flowering', harvest:'🌿 Harvest Window',
+    export_season:'📦 Export Season', risk_window:'⚠️ Key Risk Window', marketing_year:'📅 Marketing Year',
+    price_drivers:'📊 Key Price Drivers',
+    pricing_formula:'💡 Pricing Formula', data_sources_card:'📚 Data Sources',
+    confidence_lbl:'CONFIDENCE',
     buy:'BUY', hold:'HOLD', sell:'SELL', wait:'WAIT', buy_now:'BUY NOW',
     general:'General', new_badge:'NEW', on_stock:'On stock', on_request:'On request',
-    per_kg:'per kg', loading_map:'{t.loading}',
+    per_kg:'per kg', loading_map:'Loading...',
   },
 
   /* ─── FRENCH ──────────────────────────────────────────────────────── */
@@ -1820,7 +1820,7 @@ File content (base64 truncated, filename: ${file.name}): [document uploaded]` }
       <div className="page-header">
         <div className="page-title">{t.nl_title}</div>
         <div className="page-subtitle">
-          {uploadData ? `${uploadData.fileName} · uploaded ${daysSinceUpload === 0 ? 'today' : daysSinceUpload + 'd ago'}` : '{t.nl_subtitle}'}
+          {uploadData ? `${uploadData.fileName} · uploaded ${daysSinceUpload === 0 ? 'today' : daysSinceUpload + 'd ago'}` : 'Netherlands wholesale list · 01-31/03/2026'}
           {' · '}{currency} display
         </div>
       </div>
@@ -2250,7 +2250,7 @@ function Top5Catalog({ currency, t = T.nl }) {
           onChange={e => e.target.files[0] && handleTop5Upload(e.target.files[0])} />
         <button onClick={() => top5FileRef.current?.click()} disabled={uploading}
           style={{ padding:'7px 14px', background:'#6366F1', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', opacity: uploading ? 0.7 : 1 }}>
-          {uploading ? '⏳ Reading...' : '{t.upload_new}'}
+          {uploading ? '⏳ Reading...' : '📄 Upload New Price List'}
         </button>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)}
           style={{ padding:'7px 12px', border:'1.5px solid #E5E7EB', borderRadius:8, fontSize:12, background:'#fff', cursor:'pointer' }}>
@@ -2603,7 +2603,7 @@ function WeatherForecast({ currency, t = T.nl }) {
         iconSize: [36, 36], iconAnchor: [18, 18]
       });
       const marker = L.marker([c.lat, c.lon], { icon })
-        .bindPopup(`<strong>${c.flag} ${c.label}</strong><br/>🌡️ ${temp != null ? temp.toFixed(1) + '°C' : '{t.loading}'}<br/>📦 ${product.label}`)
+        .bindPopup(`<strong>${c.flag} ${c.label}</strong><br/>🌡️ ${temp != null ? temp.toFixed(1) + '°C' : 'Loading...'}<br/>📦 ${product.label}`)
         .addTo(map);
       marker.on('click', () => setSelectedCountry(c.id));
       markersRef.current[c.id] = marker;
@@ -3140,11 +3140,11 @@ function MarketIntelligence({ product, currency, liveIntel, loadingIntel, t = T.
         <div className="card" style={{ padding:'12px 14px' }}>
           <div className="card-title" style={{ marginBottom:10 }}>{t.crop_calendar}</div>
           {[
-            { label:'{t.bloom}', val: cal.bloom },
-            { label:'{t.harvest}', val: cal.harvest },
-            { label:'{t.export_season}', val: cal.export },
-            { label:'{t.risk_window}', val: cal.risk },
-            { label:'{t.marketing_year}', val: cal.marketing },
+            { label:'🌸 Bloom / Flowering', val: cal.bloom },
+            { label:'🌿 Harvest Window', val: cal.harvest },
+            { label:'📦 Export Season', val: cal.export },
+            { label:'⚠️ Key Risk Window', val: cal.risk },
+            { label:'📅 Marketing Year', val: cal.marketing },
           ].map((row, i) => (
             <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'5px 0', borderBottom: i < 4 ? '1px solid #F3F4F6' : 'none' }}>
               <span style={{ fontSize:12, color:'#6B7280' }}>{row.label}</span>
@@ -3559,7 +3559,7 @@ export default function App() {
               <div className="page-header">
                 <div className="page-title">{t.home}</div>
                 <div className="page-subtitle">
-                  {lastUpdated ? lastUpdated.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '{t.loading}'}
+                  {lastUpdated ? lastUpdated.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : 'Loading...'}
                   {' · '}{t.sources_line}
                 </div>
               </div>
@@ -3639,7 +3639,7 @@ export default function App() {
                     {totalAlerts}
                   </div>
                   <div className={`stat-change ${totalAlerts > 0 ? 'down' : 'up'}`}>
-                    {totalAlerts > 0 ? '{t.price_movements}' : '{t.all_stable}'}
+                    {totalAlerts > 0 ? t.price_movements : t.all_stable}
                   </div>
                 </div>
               </div>
