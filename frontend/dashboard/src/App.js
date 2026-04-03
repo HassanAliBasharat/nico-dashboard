@@ -39,14 +39,137 @@ const PRODUCT_META = {
   prune:           { label: 'Prunes',            emoji: '🫐', color: '#7C3AED', origin: 'USA · France · Chile' },
 };
 
+/* ══════════════════════════════════════════════════════
+   TRANSLATIONS — 6 languages (NL default)
+   ══════════════════════════════════════════════════════ */
+const LANGS = [
+  { code:'nl', label:'Nederlands', flag:'🇳🇱' },
+  { code:'en', label:'English',    flag:'🇬🇧' },
+  { code:'fr', label:'Français',   flag:'🇫🇷' },
+  { code:'de', label:'Deutsch',    flag:'🇩🇪' },
+  { code:'es', label:'Español',    flag:'🇪🇸' },
+  { code:'it', label:'Italiano',   flag:'🇮🇹' },
+];
+
+const T = {
+  nl: {
+    home:'Home', prices_forecast:'Prijzen / Prognose', all_products:'Alle Producten',
+    offered_prices:'Alle Aanbiedingsprijzen', best_sellers:'5 Bestsellers',
+    offered_nl:'Aangeboden Prijs NL', weather:'Weer / Prijsprognose',
+    alerts:'Meldingen', sources:'Bronnen', profile:'Profiel', logout:'Uitloggen',
+    scrape:'⬇ Data Ophalen', refresh:'↻ Vernieuwen',
+    overview:'Overzicht', dashboard_subtitle:'Bronnen: VN Comtrade · USDA · FAOSTAT',
+    live_data:'Live verzamelde data', live_data_desc:'Alle prijzen worden automatisch verzameld door NICO webscraper. Klik op',
+    live_data_btn:'Data Ophalen', live_data_end:'om de nieuwste prijzen te laden.',
+    upgrade:'💎 Upgrade naar Premium Data', upgrade_desc:'Verbind Vesper, Mintec of Expana voor realtime EU-benchmarkprijzen.',
+    view_sources:'Bekijk Bronnen →', total_products:'📦 Totaal Producten',
+    avg_price:'💵 Gemiddelde Prijs', most_exp:'👑 Duurste', active_alerts:'🔔 Actieve Meldingen',
+    buy:'KOOP', hold:'HOUD', sell:'VERKOOP', wait:'WACHT', buy_now:'NU KOPEN',
+    confidence:'VERTROUWEN', supply_risk:'Leveringsrisico', forecast_30:'30-Dagenprognose',
+    action:'Aanbevolen Actie', price_range:'Prijsbandbreedte',
+    search:'Zoeken...', sort_name:'Naam A→Z', sort_price_asc:'Prijs ↑', sort_price_desc:'Prijs ↓', sort_new:'Nieuw Eerst',
+    upload:'📄 Uploaden', reading:'⏳ Lezen...',
+  },
+  en: {
+    home:'Home', prices_forecast:'Prices / Forecast', all_products:'All Products',
+    offered_prices:'All Offered Prices', best_sellers:'5 Best Sellers',
+    offered_nl:'Offered Price NL', weather:'Weather / Price Forecast',
+    alerts:'Alerts', sources:'Sources', profile:'Profile', logout:'Log out',
+    scrape:'⬇ Scrape Data', refresh:'↻ Refresh',
+    overview:'Overview', dashboard_subtitle:'Sources: UN Comtrade · USDA · FAOSTAT',
+    live_data:'Live scraped data', live_data_desc:'All prices on this page are automatically collected by NICO web scraper. Click',
+    live_data_btn:'Scrape Data', live_data_end:'to fetch the latest prices.',
+    upgrade:'💎 Upgrade to Premium Data', upgrade_desc:'Connect Vesper, Mintec or Expana for real-time EU benchmark prices.',
+    view_sources:'View Sources →', total_products:'📦 Total Products Tracked',
+    avg_price:'💵 Average Price', most_exp:'👑 Most Expensive', active_alerts:'🔔 Active Alerts',
+    buy:'BUY', hold:'HOLD', sell:'SELL', wait:'WAIT', buy_now:'BUY NOW',
+    confidence:'CONFIDENCE', supply_risk:'Supply Risk', forecast_30:'30-Day Forecast',
+    action:'Recommended Action', price_range:'Price Range',
+    search:'Search...', sort_name:'Name A→Z', sort_price_asc:'Price ↑', sort_price_desc:'Price ↓', sort_new:'New First',
+    upload:'📄 Upload', reading:'⏳ Reading...',
+  },
+  fr: {
+    home:'Accueil', prices_forecast:'Prix / Prévisions', all_products:'Tous les Produits',
+    offered_prices:'Tous les Prix Proposés', best_sellers:'5 Meilleures Ventes',
+    offered_nl:'Prix Proposés NL', weather:'Météo / Prévisions Prix',
+    alerts:'Alertes', sources:'Sources', profile:'Profil', logout:'Se déconnecter',
+    scrape:'⬇ Collecter', refresh:'↻ Actualiser',
+    overview:'Aperçu', dashboard_subtitle:'Sources : ONU Comtrade · USDA · FAOSTAT',
+    live_data:'Données collectées en direct', live_data_desc:'Tous les prix sont collectés automatiquement par le scraper NICO. Cliquez sur',
+    live_data_btn:'Collecter', live_data_end:'pour obtenir les derniers prix.',
+    upgrade:'💎 Passer à Premium', upgrade_desc:'Connectez Vesper, Mintec ou Expana pour des prix de référence EU en temps réel.',
+    view_sources:'Voir les Sources →', total_products:'📦 Produits Suivis',
+    avg_price:'💵 Prix Moyen', most_exp:'👑 Le Plus Cher', active_alerts:'🔔 Alertes Actives',
+    buy:'ACHETER', hold:'CONSERVER', sell:'VENDRE', wait:'ATTENDRE', buy_now:'ACHETER',
+    confidence:'CONFIANCE', supply_risk:'Risque Approvisionnement', forecast_30:'Prévision 30J',
+    action:'Action Recommandée', price_range:'Fourchette de Prix',
+    search:'Rechercher...', sort_name:'Nom A→Z', sort_price_asc:'Prix ↑', sort_price_desc:'Prix ↓', sort_new:'Nouveaux',
+    upload:'📄 Télécharger', reading:'⏳ Lecture...',
+  },
+  de: {
+    home:'Startseite', prices_forecast:'Preise / Prognose', all_products:'Alle Produkte',
+    offered_prices:'Alle Angebotspreise', best_sellers:'5 Bestseller',
+    offered_nl:'Angebotspreis NL', weather:'Wetter / Preisprognose',
+    alerts:'Benachrichtigungen', sources:'Quellen', profile:'Profil', logout:'Abmelden',
+    scrape:'⬇ Daten abrufen', refresh:'↻ Aktualisieren',
+    overview:'Übersicht', dashboard_subtitle:'Quellen: UN Comtrade · USDA · FAOSTAT',
+    live_data:'Live-Daten', live_data_desc:'Alle Preise werden automatisch vom NICO-Scraper gesammelt. Klicken Sie auf',
+    live_data_btn:'Daten abrufen', live_data_end:'für die neuesten Preise.',
+    upgrade:'💎 Upgrade auf Premium', upgrade_desc:'Verbinden Sie Vesper, Mintec oder Expana für Echtzeit-EU-Benchmarkpreise.',
+    view_sources:'Quellen anzeigen →', total_products:'📦 Verfolgte Produkte',
+    avg_price:'💵 Durchschnittspreis', most_exp:'👑 Teuerstes', active_alerts:'🔔 Aktive Alarme',
+    buy:'KAUFEN', hold:'HALTEN', sell:'VERKAUFEN', wait:'WARTEN', buy_now:'JETZT KAUFEN',
+    confidence:'VERTRAUEN', supply_risk:'Lieferrisiko', forecast_30:'30-Tage-Prognose',
+    action:'Empfohlene Aktion', price_range:'Preisspanne',
+    search:'Suchen...', sort_name:'Name A→Z', sort_price_asc:'Preis ↑', sort_price_desc:'Preis ↓', sort_new:'Neu Zuerst',
+    upload:'📄 Hochladen', reading:'⏳ Lesen...',
+  },
+  es: {
+    home:'Inicio', prices_forecast:'Precios / Pronóstico', all_products:'Todos los Productos',
+    offered_prices:'Todos los Precios Ofrecidos', best_sellers:'5 Más Vendidos',
+    offered_nl:'Precio Ofrecido NL', weather:'Clima / Pronóstico de Precios',
+    alerts:'Alertas', sources:'Fuentes', profile:'Perfil', logout:'Cerrar sesión',
+    scrape:'⬇ Obtener datos', refresh:'↻ Actualizar',
+    overview:'Resumen', dashboard_subtitle:'Fuentes: ONU Comtrade · USDA · FAOSTAT',
+    live_data:'Datos en vivo', live_data_desc:'Todos los precios son recopilados automáticamente por el scraper de NICO. Haga clic en',
+    live_data_btn:'Obtener datos', live_data_end:'para obtener los últimos precios.',
+    upgrade:'💎 Actualizar a Premium', upgrade_desc:'Conecte Vesper, Mintec o Expana para precios de referencia EU en tiempo real.',
+    view_sources:'Ver Fuentes →', total_products:'📦 Productos Rastreados',
+    avg_price:'💵 Precio Promedio', most_exp:'👑 Más Caro', active_alerts:'🔔 Alertas Activas',
+    buy:'COMPRAR', hold:'MANTENER', sell:'VENDER', wait:'ESPERAR', buy_now:'COMPRAR YA',
+    confidence:'CONFIANZA', supply_risk:'Riesgo de Suministro', forecast_30:'Pronóstico 30 Días',
+    action:'Acción Recomendada', price_range:'Rango de Precios',
+    search:'Buscar...', sort_name:'Nombre A→Z', sort_price_asc:'Precio ↑', sort_price_desc:'Precio ↓', sort_new:'Nuevo Primero',
+    upload:'📄 Subir', reading:'⏳ Leyendo...',
+  },
+  it: {
+    home:'Home', prices_forecast:'Prezzi / Previsioni', all_products:'Tutti i Prodotti',
+    offered_prices:'Tutti i Prezzi Offerti', best_sellers:'5 Più Venduti',
+    offered_nl:'Prezzo Offerto NL', weather:'Meteo / Previsioni Prezzi',
+    alerts:'Avvisi', sources:'Fonti', profile:'Profilo', logout:'Esci',
+    scrape:'⬇ Recupera dati', refresh:'↻ Aggiorna',
+    overview:'Panoramica', dashboard_subtitle:'Fonti: ONU Comtrade · USDA · FAOSTAT',
+    live_data:'Dati raccolti in tempo reale', live_data_desc:'Tutti i prezzi sono raccolti automaticamente dallo scraper NICO. Clicca su',
+    live_data_btn:'Recupera dati', live_data_end:'per i prezzi più recenti.',
+    upgrade:'💎 Passa a Premium', upgrade_desc:'Collega Vesper, Mintec o Expana per prezzi di riferimento EU in tempo reale.',
+    view_sources:'Vedi Fonti →', total_products:'📦 Prodotti Monitorati',
+    avg_price:'💵 Prezzo Medio', most_exp:'👑 Più Costoso', active_alerts:'🔔 Avvisi Attivi',
+    buy:'COMPRARE', hold:'TENERE', sell:'VENDERE', wait:'ASPETTARE', buy_now:'COMPRA ORA',
+    confidence:'FIDUCIA', supply_risk:'Rischio Fornitura', forecast_30:'Previsione 30 Giorni',
+    action:'Azione Raccomandata', price_range:'Intervallo Prezzi',
+    search:'Cerca...', sort_name:'Nome A→Z', sort_price_asc:'Prezzo ↑', sort_price_desc:'Prezzo ↓', sort_new:'Nuovi Prima',
+    upload:'📄 Carica', reading:'⏳ Lettura...',
+  },
+};
+
 const NAV_ITEMS = [
-  { id: 'dashboard',           label: 'Dashboard',         icon: '⊞' },
-  { id: 'analytics',           label: 'Analytics',         icon: '📊' },
-  { id: 'products',            label: 'Products',          icon: '🌰' },
-  { id: 'catalog',             label: 'Supplier Catalog',  icon: '📋' },
-  { id: 'top5',                label: 'TOP 5',             icon: '⭐', indent: true },
-  { id: 'catalog_netherlands', label: 'Netherlands Supply',icon: '🇳🇱', indent: true },
-  { id: 'weather',             label: 'Weather Forecast',  icon: '🌡️' },
+  { id: 'dashboard',           label: 'Home',              icon: '⊞' },
+  { id: 'analytics',           label: 'Prices / Forecast', icon: '📊' },
+  { id: 'products',            label: 'All Products',      icon: '🌰' },
+  { id: 'catalog',             label: 'All Offered Prices',icon: '📋' },
+  { id: 'top5',                label: '5 Best Sellers',    icon: '⭐', indent: true },
+  { id: 'catalog_netherlands', label: 'Offered Price NL',  icon: '🇳🇱', indent: true },
+  { id: 'weather',             label: 'Weather / Price Forecast', icon: '🌡️' },
   { id: 'alerts',              label: 'Alerts',            icon: '🔔' },
   { id: 'sources',             label: 'Sources',           icon: '🗄️' },
 ];
@@ -2216,6 +2339,23 @@ function WeatherForecast({ currency }) {
 }
 
 
+/* ══════════════════════════════════════════════════════
+   BUY / HOLD / SELL label helper
+   Used across Alerts page and Analytics page
+   ══════════════════════════════════════════════════════ */
+function getBuySellLabel(score, trend, riskScore) {
+  // score = confidence or opportunity score 0-100
+  // trend = 'UP' | 'DOWN' | 'STABLE'
+  const s = score || 50;
+  const r = riskScore || 0;
+  if (trend === 'UP' && r >= 60) return { label: 'BUY NOW',  color: '#10B981', bg: '#D1FAE5', emoji: '🟢' };
+  if (trend === 'UP' && s >= 60)  return { label: 'BUY',      color: '#16A34A', bg: '#DCFCE7', emoji: '🟢' };
+  if (trend === 'DOWN' && s >= 55)return { label: 'SELL',     color: '#EF4444', bg: '#FEE2E2', emoji: '🔴' };
+  if (r >= 60)                    return { label: 'HOLD',     color: '#F59E0B', bg: '#FEF3C7', emoji: '🟡' };
+  if (trend === 'DOWN')           return { label: 'WAIT',     color: '#3B82F6', bg: '#DBEAFE', emoji: '🔵' };
+  return                                 { label: 'HOLD',     color: '#F59E0B', bg: '#FEF3C7', emoji: '🟡' };
+}
+
 /* ══════════════════════════════════════════════════════════════
    MARKET INTELLIGENCE COMPONENT
    Based on ChatGPT analysis recommendations from Nico_details.docx:
@@ -2458,6 +2598,9 @@ function MarketIntelligence({ product, currency, liveIntel, loadingIntel }) {
           <div style={{ fontSize:11, fontWeight:700, color: confColor }}>CONFIDENCE</div>
           <div style={{ fontSize:20, fontWeight:800, color: confColor }}>{confidence}/100</div>
           <div style={{ fontSize:10, color: confColor }}>{confLabel}</div>
+          {(() => { const bsl = getBuySellLabel(confidence, liveForecast?.trend || (confidence>=65?'UP':confidence<=40?'DOWN':'STABLE'), liveRisk?.risk_score); return (
+            <div style={{ marginTop:6, padding:'3px 10px', borderRadius:20, background:bsl.bg, color:bsl.color, fontSize:11, fontWeight:800 }}>{bsl.emoji} {bsl.label}</div>
+          ); })()}
         </div>
       </div>
 
@@ -2530,7 +2673,10 @@ export default function App() {
   const [scrapeSuccess, setScrapeSuccess] = useState(false);
   const [intelligence, setIntelligence] = useState({});
   const [loadingIntel, setLoadingIntel] = useState(false);
-  const [currency, setCurrency] = useState('USD'); // USD or EUR
+  const [currency, setCurrency] = useState('EUR'); // USD or EUR
+  const [lang, setLang] = useState(() => localStorage.getItem('nico_lang') || 'nl');
+  const t = T[lang] || T.nl;
+  const changeLang = (code) => { setLang(code); localStorage.setItem('nico_lang', code); };
   const EUR_RATE = 0.92; // 1 USD = 0.92 EUR (update periodically)
   const fmt = (usdVal) => {
     if (!usdVal) return '—';
@@ -2775,14 +2921,24 @@ export default function App() {
               </button>
             ))}
 
-            <div className="sidebar-section" style={{ marginTop: 12 }}>Profil</div>
+            <div className="sidebar-section" style={{ marginTop: 12 }}>{t.profile}</div>
             <button className="nav-item" onClick={() => { localStorage.removeItem('token'); setLoggedIn(false); }}>
-              <span style={{ fontSize: 15 }}>🚪</span> Log out
+              <span style={{ fontSize: 15 }}>🚪</span> {t.logout}
             </button>
           </div>
 
           {/* Mobile-only controls in sidebar */}
           <div className="sidebar-mobile-controls">
+            {/* Language selector mobile */}
+            <select
+              value={lang}
+              onChange={e => changeLang(e.target.value)}
+              style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #E5E7EB', borderRadius:8, fontSize:13, fontWeight:600, background:'#fff', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", color:'#374151' }}
+            >
+              {LANGS.map(l => (
+                <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+              ))}
+            </select>
             <div style={{ display:'flex', background:'#F3F4F6', borderRadius:8, padding:2, gap:2, width:'100%' }}>
               <button onClick={() => setCurrency('USD')} style={{ flex:1, padding:'7px 0', borderRadius:6, border:'none', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:700, background: currency==='USD' ? '#fff' : 'transparent', color: currency==='USD' ? '#6366F1' : '#9CA3AF', boxShadow: currency==='USD' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition:'all 0.18s' }}>$ USD</button>
               <button onClick={() => setCurrency('EUR')} style={{ flex:1, padding:'7px 0', borderRadius:6, border:'none', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:700, background: currency==='EUR' ? '#fff' : 'transparent', color: currency==='EUR' ? '#6366F1' : '#9CA3AF', boxShadow: currency==='EUR' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition:'all 0.18s' }}>€ EUR</button>
@@ -2790,7 +2946,7 @@ export default function App() {
             <button className="topbar-btn" style={{ width:'100%', justifyContent:'center' }} onClick={() => { fetchAll(); setSidebarOpen(false); }}>↻ Refresh Data</button>
             <div style={{ width:'100%' }}>
               <button className="refresh-btn" style={{ width:'100%', justifyContent:'center' }} onClick={() => { handleScrape(); setSidebarOpen(false); }} disabled={scraping}>
-                {scraping ? `⏳ ${scrapeProgress}%` : '⬇ Scrape Data'}
+                {scraping ? `⏳ ${scrapeProgress}%` : t.scrape}
               </button>
               {scraping && (
                 <div className="scrape-progress-wrap">
@@ -2832,14 +2988,24 @@ export default function App() {
                 </span>
               )}
               <div className="topbar-controls">
+                {/* Language selector — desktop topbar */}
+                <select
+                  value={lang}
+                  onChange={e => changeLang(e.target.value)}
+                  style={{ padding:'5px 10px', border:'1.5px solid #E5E7EB', borderRadius:8, fontSize:12, fontWeight:600, background:'#fff', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", color:'#374151', minWidth:120 }}
+                >
+                  {LANGS.map(l => (
+                    <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+                  ))}
+                </select>
                 <div style={{ display:'flex', background:'#F3F4F6', borderRadius:8, padding:2, gap:2 }}>
                   <button onClick={() => setCurrency('USD')} style={{ padding:'5px 12px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:700, background: currency==='USD' ? '#fff' : 'transparent', color: currency==='USD' ? '#6366F1' : '#9CA3AF', boxShadow: currency==='USD' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition:'all 0.18s' }}>$ USD</button>
                   <button onClick={() => setCurrency('EUR')} style={{ padding:'5px 12px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:700, background: currency==='EUR' ? '#fff' : 'transparent', color: currency==='EUR' ? '#6366F1' : '#9CA3AF', boxShadow: currency==='EUR' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition:'all 0.18s' }}>€ EUR</button>
                 </div>
-                <button className="topbar-btn" onClick={fetchAll}>↻ Refresh</button>
+                <button className="topbar-btn" onClick={fetchAll}>{t.refresh}</button>
                 <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
                   <button className="refresh-btn" onClick={handleScrape} disabled={scraping}>
-                    {scraping ? `⏳ ${scrapeProgress}%` : '⬇ Scrape Data'}
+                    {scraping ? `⏳ ${scrapeProgress}%` : t.scrape}
                   </button>
                   {scraping && (
                     <div className="scrape-progress-wrap">
@@ -2860,7 +3026,7 @@ export default function App() {
           {tab === 'dashboard' && (
             <div className="page fade-up">
               <div className="page-header">
-                <div className="page-title">Overview</div>
+                <div className="page-title">{t.home}</div>
                 <div className="page-subtitle">
                   {lastUpdated ? lastUpdated.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : 'Loading...'}
                   {' · '}Sources: UN Comtrade · USDA · FAOSTAT
@@ -2870,7 +3036,7 @@ export default function App() {
               {/* SCRAPER NOTICE */}
               <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, marginBottom:16, fontSize:12, color:'#166534' }}>
                 <span style={{ fontSize:15 }}>🤖</span>
-                <span><strong>Live scraped data</strong> — All prices on this page are automatically collected by NICO's web scraper from multiple sources across the internet. Click <strong>Scrape Data</strong> to fetch the latest prices.</span>
+                <span><strong>Live scraped data</strong> — All prices on this page are automatically collected by NICO web scraper from multiple sources across the internet. Click <strong>Scrape Data</strong> to fetch the latest prices.</span>
               </div>
 
               {/* UPGRADE BANNER */}
@@ -3070,7 +3236,7 @@ export default function App() {
           {tab === 'analytics' && (
             <div className="page fade-up">
               <div className="page-header">
-                <div className="page-title">Price Analytics</div>
+                <div className="page-title">{t.prices_forecast}</div>
                 <div className="page-subtitle">Historical trends & 30-day AI forecast</div>
               </div>
 
@@ -3233,7 +3399,46 @@ export default function App() {
                 </div>
               )}
 
+              {/* ── PRODUCT INTELLIGENCE SCORES ── */}
               <div className="card" style={{ marginTop: 20 }}>
+                <div className="card-title">📊 Product Intelligence Scores</div>
+                <div className="card-subtitle">Confidence score · Buy / Hold / Sell signal for all 20 categories</div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))', gap:10, marginTop:14 }}>
+                  {ALL_PRODUCTS.map(p => {
+                    const m = PRODUCT_META[p];
+                    const conf = CONFIDENCE_SCORES[p] || 50;
+                    const drivers = PRICE_DRIVERS[p] || [];
+                    const trend = conf >= 65 ? 'UP' : conf <= 40 ? 'DOWN' : 'STABLE';
+                    const bsl = getBuySellLabel(conf, trend, 0);
+                    const barColor = conf >= 70 ? '#10B981' : conf >= 50 ? '#F59E0B' : '#EF4444';
+                    return (
+                      <div key={p} onClick={() => { setSelectedProduct(p); setTab('analytics'); }}
+                        style={{ padding:'12px 14px', border:'1.5px solid #E5E7EB', borderRadius:12, cursor:'pointer', background:'#fff', transition:'all 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor='#6366F1'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor='#E5E7EB'}>
+                        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+                          <span style={{ fontSize:18 }}>{m?.emoji}</span>
+                          <span style={{ fontSize:11, fontWeight:700, color:'#374151' }}>{m?.label}</span>
+                        </div>
+                        {/* Score bar */}
+                        <div style={{ height:5, borderRadius:3, background:'#F3F4F6', marginBottom:6 }}>
+                          <div style={{ height:'100%', width:`${conf}%`, borderRadius:3, background:barColor, transition:'width 0.4s' }}/>
+                        </div>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                          <span style={{ fontSize:12, fontWeight:800, color:barColor }}>{conf}/100</span>
+                          <span style={{ fontSize:10, fontWeight:800, padding:'2px 8px', borderRadius:20,
+                            background: bsl.bg, color: bsl.color }}>
+                            {bsl.emoji} {bsl.label}
+                          </span>
+                        </div>
+                        <div style={{ fontSize:9, color:'#9CA3AF', marginTop:4 }}>{drivers[0] || ''}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="card" style={{ marginTop: 16 }}>
                 <div className="card-title">Alert Thresholds</div>
                 <div className="card-subtitle">How alerts are triggered</div>
                 <table className="data-table">
