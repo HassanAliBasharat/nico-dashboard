@@ -70,6 +70,8 @@ class DynamicCORSMiddleware(BaseHTTPMiddleware):
         origin = request.headers.get("origin", "")
         allowed = (
             origin.endswith(".vercel.app") or
+            origin.endswith(".caspiannuts.com") or
+            origin == "https://caspiannuts.com" or
             origin.startswith("http://localhost") or
             origin.startswith("https://localhost")
         )
