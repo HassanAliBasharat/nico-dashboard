@@ -1,21 +1,27 @@
-from sqlalchemy import Column, Integer, String, Numeric, DateTime
-from sqlalchemy.sql import func
-from backend.database.db import Base
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text
+from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
+
+Base = declarative_base()
 
 class DryfruitPrice(Base):
     __tablename__ = "dryfruit_prices"
-
-    id             = Column(Integer, primary_key=True, index=True)
-    product        = Column(String(100), nullable=False)
-    price          = Column(Numeric(10, 2), nullable=False)
-    currency       = Column(String(10), default='USD')
-    country        = Column(String(100))
-    source         = Column(String(200))
-    date_collected = Column(DateTime, server_default=func.now())
+    id          = Column(Integer, primary_key=True, index=True)
+    product     = Column(String, index=True)
+    price_usd   = Column(Float)
+    price_eur   = Column(Float, nullable=True)
+    country     = Column(String, nullable=True)
+    source      = Column(String, nullable=True)
+    eu_low      = Column(Float, nullable=True)
+    eu_high     = Column(Float, nullable=True)
+    eu_avg      = Column(Float, nullable=True)
+    scraped_at  = Column(DateTime, default=datetime.utcnow)
+    notes       = Column(Text, nullable=True)
 
 class User(Base):
     __tablename__ = "users"
-
     id              = Column(Integer, primary_key=True, index=True)
-    username        = Column(String(50), unique=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    username        = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    role            = Column(String, default="visitor")  # "admin" or "visitor"
+    created_at      = Column(DateTime, default=datetime.utcnow)
