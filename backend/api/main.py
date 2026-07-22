@@ -2,13 +2,17 @@ import os
 import threading
 import hashlib
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
+from pydantic import BaseModel, EmailStr
+import smtplib, secrets, string
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # ─── Load .env file when running locally ───────────────────────────────────────
 # On Railway, environment variables are injected automatically — load_dotenv()
@@ -137,12 +141,147 @@ def _keep_alive():
 
 threading.Thread(target=_keep_alive, daemon=True).start()
 
+
+# ─── Visitor Registration Models ─────────────────────────────────────────────
+class VisitorRegisterRequest(BaseModel):
+    email: str
+    password: str
+    first_name: str = ""
+    last_name: str = ""
+
+class WordPressWebhookPayload(BaseModel):
+    email: str
+    password: str
+    first_name: str = ""
+    last_name: str = ""
+    source: str = "wordpress"
+
+# ─── Email helper ─────────────────────────────────────────────────────────────
+def send_nico_welcome_email(email: str, password: str, first_name: str = ""):
+    """Send NICO welcome email via Resend API."""
+    import urllib.request, json as _json
+    api_key = os.getenv("SMTP_PASS", "")
+    from_email = os.getenv("FROM_EMAIL", "noreply@caspiannuts.nl")
+    if not api_key:
+        print("Resend API key not configured — skipping welcome email")
+        return
+    try:
+        name = first_name or "there"
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <h1 style="color:#1E40AF;font-size:28px;margin:0;">NICO</h1>
+            <p style="color:#6B7280;font-size:13px;margin:4px 0 0;">Price Intelligence Dashboard</p>
+          </div>
+          <div style="background:#fff;border-radius:10px;padding:28px;border:1px solid #E5E7EB;">
+            <p style="color:#374151;font-size:15px;">Hi {name},</p>
+            <p style="color:#374151;font-size:14px;">Welcome to Caspian Nuts! Your NICO dashboard access is ready.</p>
+            <p style="color:#374151;font-size:14px;">Monitor live market prices, product catalogs and weather forecasts for all our products.</p>
+            <div style="background:#EFF6FF;border-radius:8px;padding:16px;margin:20px 0;border:1px solid #BFDBFE;">
+              <p style="margin:0 0 8px;color:#1E40AF;font-weight:700;font-size:13px;">Your Login Details</p>
+              <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>URL:</strong> <a href="https://forecast.caspiannuts.com" style="color:#2563EB;">forecast.caspiannuts.com</a></p>
+              <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Email:</strong> {email}</p>
+              <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Password:</strong> {password}</p>
+            </div>
+            <p style="color:#6B7280;font-size:12px;">This is the same password you use on caspiannuts.nl. If you change your password there, update it here too.</p>
+            <div style="text-align:center;margin-top:24px;">
+              <a href="https://forecast.caspiannuts.com" style="background:#1E40AF;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Open NICO Dashboard</a>
+            </div>
+          </div>
+          <p style="text-align:center;color:#9CA3AF;font-size:11px;margin-top:20px;">Caspian Nuts B.V. · caspiannuts.nl</p>
+        </div>
+        """
+        payload = _json.dumps({
+            "from": f"Caspian Nuts <{from_email}>",
+            "to": [email],
+            "subject": "Your NICO Price Intelligence Access",
+            "html": html
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req) as resp:
+            result = _json.loads(resp.read())
+            print(f"Welcome email sent to {email}, id: {result.get('id')}")
+    except Exception as e:
+        print(f"Email send failed: {e}")
+
+# ─── WordPress Webhook — called when user registers on caspiannuts.nl ─────────
+@app.post("/webhook/wordpress-register")
+def wordpress_register_webhook(
+    payload: WordPressWebhookPayload,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Called by WordPress (via WP Webhooks plugin or custom hook) when a new
+    user registers on caspiannuts.nl. Creates a NICO visitor account and
+    sends a welcome email with login credentials.
+    """
+    # Use email as username (lowercase, stripped)
+    username = payload.email.lower().strip()
+    # Check if already exists
+    existing = db.query(User).filter(User.username == username).first()
+    if existing:
+        return {"status": "exists", "message": "User already has NICO access"}
+    # Create visitor account with same password
+    hashed = hashlib.sha256(payload.password.encode()).hexdigest()
+    new_user = User(
+        username=username,
+        hashed_password=hashed,
+        role="visitor"
+    )
+    db.add(new_user)
+    db.commit()
+    # Send welcome email in background
+    background_tasks.add_task(
+        send_nico_welcome_email,
+        payload.email,
+        payload.password,
+        payload.first_name
+    )
+    return {"status": "created", "message": f"Visitor account created for {username}"}
+
+# ─── Manual visitor registration (fallback) ───────────────────────────────────
+@app.post("/register/visitor")
+def register_visitor(
+    payload: VisitorRegisterRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """Manual visitor registration endpoint."""
+    username = payload.email.lower().strip()
+    existing = db.query(User).filter(User.username == username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Account already exists")
+    hashed = hashlib.sha256(payload.password.encode()).hexdigest()
+    new_user = User(username=username, hashed_password=hashed, role="visitor")
+    db.add(new_user)
+    db.commit()
+    background_tasks.add_task(send_nico_welcome_email, payload.email, payload.password, payload.first_name)
+    return {"status": "created", "message": "Visitor account created"}
+
+# ─── Get current user role (used by frontend) ─────────────────────────────────
+@app.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "username": current_user.username,
+        "role": getattr(current_user, "role", "admin")
+    }
+
+
 @app.post("/login")
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form.username).first()
     if not user or not verify_password(form.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {"access_token": create_token({"sub": user.username}), "token_type": "bearer"}
+    role = getattr(user, "role", "admin"); return {"access_token": create_token({"sub": user.username, "role": role}), "token_type": "bearer", "role": role}
 
 @app.get("/prices")
 def read_prices(db: Session = Depends(get_db), _=Depends(get_current_user)):
