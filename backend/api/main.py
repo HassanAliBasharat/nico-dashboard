@@ -158,12 +158,14 @@ class WordPressWebhookPayload(BaseModel):
 
 # ─── Email helper ─────────────────────────────────────────────────────────────
 def send_nico_welcome_email(email: str, password: str, first_name: str = ""):
-    """Send NICO welcome email via Resend API."""
-    import urllib.request, json as _json
-    api_key = os.getenv("SMTP_PASS", "")
+    """Send NICO welcome email via SMTP (Resend SMTP relay)."""
+    smtp_host = os.getenv("SMTP_HOST", "smtp.resend.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER", "resend")
+    smtp_pass = os.getenv("SMTP_PASS", "")
     from_email = os.getenv("FROM_EMAIL", "noreply@caspiannuts.nl")
-    if not api_key:
-        print("Resend API key not configured — skipping welcome email")
+    if not smtp_pass:
+        print("SMTP_PASS not configured — skipping welcome email")
         return
     try:
         name = first_name or "there"
@@ -183,7 +185,7 @@ def send_nico_welcome_email(email: str, password: str, first_name: str = ""):
               <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Email:</strong> {email}</p>
               <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Password:</strong> {password}</p>
             </div>
-            <p style="color:#6B7280;font-size:12px;">This is the same password you use on caspiannuts.nl. If you change your password there, update it here too.</p>
+            <p style="color:#6B7280;font-size:12px;">This is the same password you use on caspiannuts.nl.</p>
             <div style="text-align:center;margin-top:24px;">
               <a href="https://forecast.caspiannuts.com" style="background:#1E40AF;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Open NICO Dashboard</a>
             </div>
@@ -191,24 +193,17 @@ def send_nico_welcome_email(email: str, password: str, first_name: str = ""):
           <p style="text-align:center;color:#9CA3AF;font-size:11px;margin-top:20px;">Caspian Nuts B.V. · caspiannuts.nl</p>
         </div>
         """
-        payload = _json.dumps({
-            "from": f"Caspian Nuts <{from_email}>",
-            "to": [email],
-            "subject": "Your NICO Price Intelligence Access",
-            "html": html
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            "https://api.resend.com/emails",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            method="POST"
-        )
-        with urllib.request.urlopen(req) as resp:
-            result = _json.loads(resp.read())
-            print(f"Welcome email sent to {email}, id: {result.get('id')}")
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Your NICO Price Intelligence Access"
+        msg["From"] = f"Caspian Nuts <{from_email}>"
+        msg["To"] = email
+        msg.attach(MIMEText(html, "html"))
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(from_email, email, msg.as_string())
+        print(f"Welcome email sent to {email}")
     except Exception as e:
         print(f"Email send failed: {e}")
 
@@ -334,11 +329,11 @@ def latest_prices(db: Session = Depends(get_db), _=Depends(get_current_user)):
     result = {}
     for p in ALL_PRODUCTS:
         row = db.query(DryfruitPrice).filter(DryfruitPrice.product == p)\
-                .order_by(desc(DryfruitPrice.date_collected)).first()
+                .order_by(desc(DryfruitPrice.scraped_at)).first()
         if row:
             result[p] = {"price": float(row.price), "currency": row.currency,
                          "country": row.country, "source": row.source,
-                         "date": row.date_collected.isoformat()}
+                         "date": row.scraped_at.isoformat()}
     return result
 
 @app.get("/prices/{product}")
@@ -351,8 +346,8 @@ def product_prices(product: str, db: Session = Depends(get_db), _=Depends(get_cu
 @app.get("/history/{product}")
 def price_history(product: str, db: Session = Depends(get_db), _=Depends(get_current_user)):
     rows = db.query(DryfruitPrice).filter(DryfruitPrice.product == product)\
-             .order_by(DryfruitPrice.date_collected).limit(200).all()
-    return [{"date": r.date_collected.isoformat(), "price": float(r.price),
+             .order_by(DryfruitPrice.scraped_at).limit(200).all()
+    return [{"date": r.scraped_at.isoformat(), "price": float(r.price),
              "country": r.country, "source": r.source} for r in rows]
 
 @app.get("/market-summary")
@@ -360,7 +355,7 @@ def market_summary(db: Session = Depends(get_db), _=Depends(get_current_user)):
     summary = {}
     for p in ALL_PRODUCTS:
         rows = db.query(DryfruitPrice).filter(DryfruitPrice.product == p)\
-                 .order_by(desc(DryfruitPrice.date_collected)).limit(30).all()
+                 .order_by(desc(DryfruitPrice.scraped_at)).limit(30).all()
         if rows:
             prices = [float(r.price) for r in rows]
             prev = float(rows[1].price) if len(rows) > 1 else prices[0]
@@ -378,7 +373,7 @@ def get_alerts(db: Session = Depends(get_db), _=Depends(get_current_user)):
     alerts = []
     for p in ALL_PRODUCTS:
         rows = db.query(DryfruitPrice).filter(DryfruitPrice.product == p)\
-                 .order_by(desc(DryfruitPrice.date_collected)).limit(10).all()
+                 .order_by(desc(DryfruitPrice.scraped_at)).limit(10).all()
         if len(rows) >= 2:
             curr, prev = float(rows[0].price), float(rows[1].price)
             pct = round(((curr - prev) / prev) * 100, 2) if prev else 0
@@ -394,7 +389,7 @@ def get_alerts(db: Session = Depends(get_db), _=Depends(get_current_user)):
 @app.get("/predict/{product}")
 def predict(product: str, db: Session = Depends(get_db), _=Depends(get_current_user)):
     rows = db.query(DryfruitPrice).filter(DryfruitPrice.product == product)\
-             .order_by(DryfruitPrice.date_collected).limit(60).all()
+             .order_by(DryfruitPrice.scraped_at).limit(60).all()
     if len(rows) < 5:
         raise HTTPException(status_code=400, detail="Need at least 5 data points")
     prices = [float(r.price) for r in rows]
