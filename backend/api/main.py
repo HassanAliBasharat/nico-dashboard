@@ -2,7 +2,7 @@ import os
 import threading
 import hashlib
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -214,39 +214,81 @@ def send_nico_welcome_email(email: str, password: str, first_name: str = ""):
 
 # ─── WordPress Webhook — called when user registers on caspiannuts.nl ─────────
 @app.post("/webhook/wordpress-register")
-def wordpress_register_webhook(
-    payload: WordPressWebhookPayload,
+async def wordpress_register_webhook(
+    request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
-    Called by WordPress (via WP Webhooks plugin or custom hook) when a new
-    user registers on caspiannuts.nl. Creates a NICO visitor account and
-    sends a welcome email with login credentials.
+    Accepts any format WordPress sends — parses body flexibly.
+    WP Webhooks sends user data in various formats depending on configuration.
     """
-    # Use email as username (lowercase, stripped)
-    username = payload.email.lower().strip()
-    # Check if already exists
-    existing = db.query(User).filter(User.username == username).first()
-    if existing:
-        return {"status": "exists", "message": "User already has NICO access"}
-    # Create visitor account with same password
-    hashed = hashlib.sha256(payload.password.encode()).hexdigest()
-    new_user = User(
-        username=username,
-        hashed_password=hashed,
-        role="visitor"
-    )
-    db.add(new_user)
-    db.commit()
-    # Send welcome email in background
-    background_tasks.add_task(
-        send_nico_welcome_email,
-        payload.email,
-        payload.password,
-        payload.first_name
-    )
-    return {"status": "created", "message": f"Visitor account created for {username}"}
+    import json as _json
+    try:
+        body = await request.body()
+        # Try JSON first
+        try:
+            data = _json.loads(body)
+        except Exception:
+            # Try form data
+            from urllib.parse import parse_qs
+            parsed = parse_qs(body.decode("utf-8"))
+            data = {k: v[0] for k, v in parsed.items()}
+
+        print(f"Webhook received: {_json.dumps(data)[:500]}")
+
+        # Extract email — WP Webhooks sends it as user_email or email
+        email = (
+            data.get("user_email") or
+            data.get("email") or
+            data.get("Email") or
+            data.get("USER_EMAIL") or ""
+        ).lower().strip()
+
+        # Extract password — sent as user_pass or password
+        password = (
+            data.get("user_pass") or
+            data.get("password") or
+            data.get("Password") or
+            data.get("USER_PASS") or ""
+        ).strip()
+
+        # Extract name
+        first_name = (
+            data.get("first_name") or
+            data.get("user_firstname") or
+            data.get("display_name") or
+            data.get("user_nicename") or ""
+        ).strip()
+
+        if not email:
+            print(f"No email found in payload: {data}")
+            return {"status": "error", "message": "No email in payload", "received": data}
+
+        if not password:
+            # If no password sent, create a temporary one from email
+            import secrets
+            password = secrets.token_urlsafe(10)
+            print(f"No password in payload, generated one for {email}")
+
+        # Check if already exists
+        existing = db.query(User).filter(User.username == email).first()
+        if existing:
+            return {"status": "exists", "message": f"User {email} already has NICO access"}
+
+        # Create visitor account
+        hashed = hashlib.sha256(password.encode()).hexdigest()
+        new_user = User(username=email, hashed_password=hashed, role="visitor")
+        db.add(new_user)
+        db.commit()
+
+        # Send welcome email in background
+        background_tasks.add_task(send_nico_welcome_email, email, password, first_name)
+        return {"status": "created", "message": f"Visitor account created for {email}"}
+
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return {"status": "error", "message": str(e)}
 
 # ─── Manual visitor registration (fallback) ───────────────────────────────────
 @app.post("/register/visitor")
