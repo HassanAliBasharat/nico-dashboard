@@ -929,7 +929,8 @@ function Login({ onLogin }) {
       fd.append('username', user); fd.append('password', pass);
       const res = await axios.post(`${API}/login`, fd);
       localStorage.setItem('token', res.data.access_token);
-      onLogin();
+      localStorage.setItem('nico_role', res.data.role || 'visitor');
+      onLogin(res.data.role || 'visitor');
     } catch { setError('Invalid username or password'); }
     setLoading(false);
   };
@@ -957,6 +958,12 @@ function Login({ onLogin }) {
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: '#D1D5DB', fontFamily: "'JetBrains Mono',monospace" }}>
           UN Comtrade · USDA · FAOSTAT · Market Data
         </div>
+        <p style={{ textAlign:'center', fontSize:12, color:'#6B7280', marginTop:16, padding:'0 20px' }}>
+          Visitor? Register at{' '}
+          <a href="https://caspiannuts.nl" target="_blank" rel="noreferrer"
+            style={{ color:'#2563EB', fontWeight:700 }}>caspiannuts.nl</a>
+          {' '}to receive your NICO login credentials by email.
+        </p>
       </div>
     </div>
   );
@@ -1345,7 +1352,7 @@ function getNLCategory(productName) {
 /* ─────────────────────────────────────────────
    SUPPLIER CATALOG COMPONENT — fully responsive
 ───────────────────────────────────────────── */
-function SupplierCatalog({ fmt, currency, t = T.nl }) {
+function SupplierCatalog({ fmt, currency, t = T.nl, isVisitor = false }) {
   const [activeTab, setActiveTab] = useState('Almonds');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name');
@@ -1507,6 +1514,7 @@ function SupplierCatalog({ fmt, currency, t = T.nl }) {
           </div>
 
           {/* ── UPLOAD BANNER for All Offered Prices ── */}
+          {!isVisitor && (
           <div style={{ background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:12, padding:'12px 18px', marginBottom:16, display:'flex', alignItems:'center', gap:14, flexWrap:'wrap', position:'relative' }}>
             <span style={{ fontSize:18 }}>📋</span>
             <div style={{ flex:'1 1 200px' }}>
@@ -1531,6 +1539,7 @@ function SupplierCatalog({ fmt, currency, t = T.nl }) {
             </div>
             {uploadBanner && <div style={{ width:'100%', fontSize:12, color: uploadBanner.startsWith('✅') ? '#10B981' : '#EF4444', marginTop:2 }}>{uploadBanner}</div>}
           </div>
+          )}
           <button
             className="topbar-btn"
             onClick={() => setShowCharts(s => !s)}
@@ -1624,7 +1633,7 @@ function SupplierCatalog({ fmt, currency, t = T.nl }) {
                     <th style={{ minWidth:180 }}>{t.col_product}</th>
                     <th style={{ minWidth:90 }}>{t.col_origin}</th>
                     <th style={{ minWidth:110 }}>{t.col_packaging}</th>
-                    <th style={{ minWidth:90 }}>{t.col_availability}</th>
+                    {!isVisitor && <th style={{ minWidth:90 }}>{t.col_availability}</th>}
                     <th style={{ minWidth:80 }}>{t.col_price_unit}</th>
                     <th style={{ minWidth:80 }}>Truck Load</th>
                     <th style={{ minWidth:80 }}>{t.col_qty}</th>
@@ -1692,7 +1701,7 @@ function SupplierCatalog({ fmt, currency, t = T.nl }) {
   );
 }
 
-function NetherlandsSupplyCatalog({ currency, t = T.nl }) {
+function NetherlandsSupplyCatalog({ currency, t = T.nl, isVisitor = false }) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name'); // name | price_asc | price_desc | new
   const [activeTab, setActiveTab] = useState('All');
@@ -2172,7 +2181,7 @@ function volatilityBadge(v) {
   return 'badge-green';
 }
 
-function Top5Catalog({ currency, t = T.nl }) {
+function Top5Catalog({ currency, t = T.nl, isVisitor = false }) {
   const [activeTab, setActiveTab] = useState('Walnuts');
   const [sortBy, setSortBy] = useState('rank');
   const [uploading, setUploading] = useState(false);
@@ -2503,7 +2512,7 @@ function tempClass(c) { // eslint-disable-line no-unused-vars
   return 'temp-cold';
 }
 
-function WeatherForecast({ currency, t = T.nl }) {
+function WeatherForecast({ currency, t = T.nl, isVisitor = false }) {
   /* ── Dropdown 1: product category ── */
   const [selectedProduct, setSelectedProduct] = useState('walnut');
   /* ── Dropdown 2: origin country ── */
@@ -2975,7 +2984,7 @@ const SOURCE_STACK = {
   prune:           ['USDA ERS', 'USDA FAS', 'Eurostat', 'France AgriMer'],
 };
 
-function MarketIntelligence({ product, currency, liveIntel, loadingIntel, t = T.nl }) {
+function MarketIntelligence({ product, currency, liveIntel, loadingIntel, t = T.nl, isVisitor = false }) {
   /* liveIntel structure from /intelligence/{product_id}:
      { risk: {risk_score, availability, triggered_events, explanation},
        forecast: {adjusted_forecast, confidence_score, trend, change_pct, forecast_low, forecast_high, explanation},
@@ -3210,6 +3219,8 @@ export default function App() {
   const [lang, setLang] = useState(() => localStorage.getItem('nico_lang') || 'nl');
   const t = T[lang] || T.nl;
   const changeLang = (code) => { setLang(code); localStorage.setItem('nico_lang', code); };
+  const [userRole, setUserRole] = useState(() => localStorage.getItem('nico_role') || 'visitor');
+  const isVisitor = userRole === 'visitor';
   const EUR_RATE = 0.92; // 1 USD = 0.92 EUR (update periodically)
   const fmt = (usdVal) => {
     if (!usdVal) return '—';
@@ -3326,7 +3337,7 @@ export default function App() {
     }
   };
 
-  if (!loggedIn) return (<><style>{CSS}</style><Login onLogin={() => setLoggedIn(true)} /></>);
+  if (!loggedIn) return (<><style>{CSS}</style><Login onLogin={(role) => { setLoggedIn(true); setUserRole(role || localStorage.getItem("nico_role") || "visitor"); }} /></>);
 
   /* ── Derived stats ── */
   const totalProducts = ALL_PRODUCTS.filter(p => summary[p]).length;
@@ -3444,7 +3455,7 @@ export default function App() {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
             <div className="sidebar-section">General</div>
-            {getNavItems(t).map(item => (
+            {getNavItems(t).filter(item => isVisitor ? ['dashboard','products','catalog','top5','catalog_netherlands','weather'].includes(item.id) : true).map(item => (
               <button key={item.id}
                 className={`nav-item ${tab === item.id ? 'active' : ''}`}
                 style={item.indent ? { paddingLeft: 28, fontSize: 13, opacity: 0.92 } : {}}
@@ -3457,7 +3468,7 @@ export default function App() {
             ))}
 
             <div className="sidebar-section" style={{ marginTop: 12 }}>{t.profile}</div>
-            <button className="nav-item" onClick={() => { localStorage.removeItem('token'); setLoggedIn(false); }}>
+            <button className="nav-item" onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('nico_role'); setUserRole('visitor'); setLoggedIn(false); }}>
               <span style={{ fontSize: 15 }}>🚪</span> {t.logout}
             </button>
           </div>
@@ -3694,7 +3705,7 @@ export default function App() {
                     <thead>
                       <tr>
                         <th>{t.col_product}</th>
-                        <th>{t.col_price}</th>
+                        {!isVisitor && <th>{t.col_price}</th>}
                         <th>{t.col_country}</th>
                         <th>{t.col_source}</th>
                         <th>{t.col_eu_range}</th>
@@ -3842,6 +3853,7 @@ export default function App() {
                 liveIntel={intelligence[selectedProduct] || null}
                 loadingIntel={loadingIntel}
                 t={t}
+                isVisitor={isVisitor}
               />
             </div>
           )}
@@ -3992,22 +4004,22 @@ export default function App() {
           {/* ════════════════════════════
               SUPPLIER CATALOG TAB
           ════════════════════════════ */}
-          {tab === 'catalog' && <SupplierCatalog fmt={fmt} currency={currency} t={t} />}
+          {tab === 'catalog' && <SupplierCatalog fmt={fmt} currency={currency} t={t} isVisitor={isVisitor} />}
 
           {/* ════════════════════════════
               NETHERLANDS SUPPLY TAB
           ════════════════════════════ */}
-          {tab === 'catalog_netherlands' && <NetherlandsSupplyCatalog currency={currency} t={t} />}
+          {tab === 'catalog_netherlands' && <NetherlandsSupplyCatalog currency={currency} t={t} isVisitor={isVisitor} />}
 
           {/* ════════════════════════════
               TOP 5 TAB
           ════════════════════════════ */}
-          {tab === 'top5' && <Top5Catalog currency={currency} t={t} />}
+          {tab === 'top5' && <Top5Catalog currency={currency} t={t} isVisitor={isVisitor} />}
 
           {/* ════════════════════════════
               WEATHER FORECAST TAB
           ════════════════════════════ */}
-          {tab === 'weather' && <WeatherForecast currency={currency} t={t} />}
+          {tab === 'weather' && <WeatherForecast currency={currency} t={t} isVisitor={isVisitor} />}
 
           {/* ════════════════════════════
               SOURCES TAB
@@ -4039,7 +4051,7 @@ export default function App() {
                       ].map((s, i) => (
                         <tr key={i}>
                           <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{s.name}</td>
-                          <td><span className={`badge ${s.badge}`}>{s.type}</span></td>
+                          {!isVisitor && <td><span className={`badge ${s.badge}`}>{s.type}</span></td>}
                           <td style={{ color: '#6B7280', fontSize: 12 }}>{s.prod}</td>
                           <td>
                             <a href={`https://${s.url}`} target="_blank" rel="noreferrer"
